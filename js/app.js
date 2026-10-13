@@ -17,6 +17,7 @@
   const State = {
     currentScreen: 'mapa',
     theme: localStorage.getItem('pb_theme') || 'light',
+    tabId: 'tab_' + Math.random().toString(36).substring(2, 9),
     
     // Perfil del Usuario y Logros
     profile: {
@@ -41,7 +42,9 @@
         color: '#B79CE0',
         x: 38,
         y: 48,
-        station: null
+        station: null,
+        tabId: null,
+        lastSeen: null
       }
     },
 
@@ -393,9 +396,22 @@
     window.sounds && window.sounds.playClick();
 
     if (screenId === 'mapa') {
+      State.room.selectedStation = null;
+      sendPeerMessage({ type: 'peer_station', stationKey: null, stationTitle: null });
       updateRoomClock();
       updateRoomPresence();
       updateProfileAvatarPreview();
+    } else {
+      const stationMap = {
+        dibujo: 'Mesa de Dibujo',
+        turnos: 'Rincón de Palabras',
+        trivia: 'Rincón de Trivia',
+        pasillo: 'El Pasillo (Café)'
+      };
+      if (stationMap[screenId]) {
+        State.room.selectedStation = screenId;
+        sendPeerMessage({ type: 'peer_station', stationKey: screenId, stationTitle: stationMap[screenId] });
+      }
     }
     if (screenId === 'dibujo') initDrawingScreen();
     if (screenId === 'turnos') renderWordChain();
@@ -531,9 +547,7 @@
     State.room.avatarX = clampedX;
     State.room.avatarY = clampedY;
 
-    if (State.p2p.connection && State.p2p.connected) {
-      sendPeerMessage({ type: 'peer_walk', x: clampedX, y: clampedY });
-    }
+    sendPeerMessage({ type: 'peer_walk', x: clampedX, y: clampedY });
 
     clearTimeout(avatar._walkTimer);
     avatar._walkTimer = setTimeout(() => {
@@ -571,9 +585,7 @@
     if (!station) return;
 
     State.room.selectedStation = stationKey;
-    if (State.p2p.connection && State.p2p.connected) {
-      sendPeerMessage({ type: 'peer_station', stationKey, stationTitle: station.title });
-    }
+    sendPeerMessage({ type: 'peer_station', stationKey, stationTitle: station.title });
     walkAvatarTo(station.targetX, station.targetY, () => {
       openStationModal(stationKey);
     });
@@ -676,7 +688,7 @@
 
   function updateRoomPresence() {
     const colleaguesLayer = $('#roomColleaguesLayer');
-    const onlineCountEl = $('#roomOnlineCount');
+    const presenceBadge = $('#roomPresenceBadge');
     const peerAvatar = $('#roomPeerAvatar');
     const peerNameEl = $('#roomPeerAvatarName');
     const peerStatusEl = $('#roomPeerAvatarStatus');
@@ -695,10 +707,23 @@
       }
       if (peerNameEl) peerNameEl.textContent = State.room.peer.name;
       if (peerStatusEl) peerStatusEl.textContent = State.room.peer.station ? `En ${State.room.peer.station}` : 'En descanso';
-      if (onlineCountEl) onlineCountEl.textContent = `🟢 En vivo con ${State.room.peer.name}`;
+      
+      if (presenceBadge) {
+        presenceBadge.innerHTML = `🟢 2 compañeros en la sala (En vivo con ${State.room.peer.name})`;
+        presenceBadge.style.background = 'rgba(95, 158, 130, 0.2)';
+        presenceBadge.style.borderColor = 'var(--accent)';
+      }
     } else {
       if (peerAvatar) peerAvatar.hidden = true;
-      if (onlineCountEl) onlineCountEl.textContent = State.simulatedCompanionsEnabled ? '4 compañeros en la sala' : '1 (Tú)';
+      if (presenceBadge) {
+        presenceBadge.style.background = '';
+        presenceBadge.style.borderColor = '';
+        if (State.simulatedCompanionsEnabled) {
+          presenceBadge.innerHTML = `🟢 <span id="roomOnlineCount">4</span> compañeros en la sala`;
+        } else {
+          presenceBadge.innerHTML = `🟢 1 en la sala (Tú)`;
+        }
+      }
     }
 
     $$('.booth-avatars').forEach(box => {
@@ -745,7 +770,7 @@
     ctx.restore();
     saveCanvasState();
 
-    if (broadcast && State.p2p.connection) {
+    if (broadcast) {
       sendPeerMessage({ type: 'clear' });
     }
   }
@@ -802,14 +827,12 @@
     ctx.lineTo(x + 0.5, y);
     ctx.stroke();
 
-    if (State.p2p.connection) {
-      sendPeerMessage({
-        type: 'draw_down',
-        x, y,
-        color: State.draw.currentColor,
-        size: State.draw.currentLineWidth
-      });
-    }
+    sendPeerMessage({
+      type: 'draw_down',
+      x, y,
+      color: State.draw.currentColor,
+      size: State.draw.currentLineWidth
+    });
 
     window.sounds && window.sounds.playClick();
   }
@@ -820,9 +843,7 @@
     ctx.lineTo(x, y);
     ctx.stroke();
 
-    if (State.p2p.connection) {
-      sendPeerMessage({ type: 'draw_move', x, y });
-    }
+    sendPeerMessage({ type: 'draw_move', x, y });
   }
 
   function handlePointerUp() {
@@ -831,9 +852,7 @@
     ctx.closePath();
     saveCanvasState();
 
-    if (State.p2p.connection) {
-      sendPeerMessage({ type: 'draw_up' });
-    }
+    sendPeerMessage({ type: 'draw_up' });
   }
 
   function startTimer() {
@@ -960,7 +979,7 @@
     $('#drawStatusMsg').className = 'feedback-msg success';
 
     // Broadcast a compañero P2P cortando el loop (el receptor no volverá a hacer broadcast)
-    if (broadcast && State.p2p.connection) {
+    if (broadcast) {
       sendPeerMessage({ type: 'win', winnerName, word });
     }
   }
@@ -1011,14 +1030,12 @@
   function toggleDrawRole() {
     State.draw.role = State.draw.role === 'drawer' ? 'guesser' : 'drawer';
     updateDrawRoleUI();
-    if (State.p2p.connection) {
-      sendPeerMessage({
-        type: 'draw_role',
-        role: State.draw.role === 'drawer' ? 'guesser' : 'drawer',
-        word: State.draw.secretWord,
-        hint: State.draw.hint
-      });
-    }
+    sendPeerMessage({
+      type: 'draw_role',
+      role: State.draw.role === 'drawer' ? 'guesser' : 'drawer',
+      word: State.draw.secretWord,
+      hint: State.draw.hint
+    });
     window.sounds && window.sounds.playClick();
     toast(State.draw.role === 'drawer' ? '🎨 Ahora eres el Dibujante. ¡Toma el pincel!' : '🔍 Ahora eres Adivinador. ¡Mira el lienzo e intenta adivinar!');
   }
@@ -1115,9 +1132,7 @@
     window.sounds && window.sounds.playPop();
     postChatMessage(State.profile.name, guessText, false);
 
-    if (State.p2p.connection) {
-      sendPeerMessage({ type: 'guess', name: State.profile.name, text: guessText });
-    }
+    sendPeerMessage({ type: 'guess', name: State.profile.name, text: guessText });
 
     if (cleanGuess === State.draw.secretWord.toUpperCase()) {
       executeRoundWin(State.profile.name, State.draw.secretWord, true);
@@ -1300,9 +1315,7 @@
       checkAndUnlockAchievement('wordsmith');
     }
 
-    if (State.p2p.connection) {
-      sendPeerMessage({ type: 'word_chain', entry: newEntry });
-    }
+    sendPeerMessage({ type: 'word_chain', entry: newEntry });
 
     window.sounds && window.sounds.playSuccess();
     triggerConfetti();
@@ -1621,9 +1634,7 @@
 
     checkAndUnlockAchievement('pasillo');
 
-    if (State.p2p.connection) {
-      sendPeerMessage({ type: 'pasillo_note', note: newNote });
-    }
+    sendPeerMessage({ type: 'pasillo_note', note: newNote });
 
     window.sounds && window.sounds.playPop();
     toast('¡Dejaste tu nota en El Pasillo!');
@@ -1668,9 +1679,7 @@
 
     checkAndUnlockAchievement('pasillo');
 
-    if (State.p2p.connection) {
-      sendPeerMessage({ type: 'pasillo_reply', noteId: note.id, reply: newReply });
-    }
+    sendPeerMessage({ type: 'pasillo_reply', noteId: note.id, reply: newReply });
 
     window.sounds && window.sounds.playPop();
     toast(`¡Respondiste a la nota de ${note.author}!`);
@@ -1888,21 +1897,93 @@
   }
 
   // ==========================================
-  // 9. MULTIJUGADOR WEBRTC P2P (PEERJS)
+  // 9. MULTIJUGADOR EN VIVO: MESH LOCAL (BROADCASTCHANNEL) + WEBRTC P2P (PEERJS)
   // ==========================================
+  function initMesh() {
+    if (!State.tabId) {
+      State.tabId = 'tab_' + Math.random().toString(36).substring(2, 9);
+    }
+
+    // 1. BroadcastChannel: sincronización instantánea entre pestañas / ventanas en el mismo equipo
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        window.roomBroadcastChannel = new BroadcastChannel('playbreak_multiverse_v1');
+        window.roomBroadcastChannel.onmessage = (event) => {
+          if (event.data && event.data.senderTabId !== State.tabId) {
+            handleRemotePeerData(event.data);
+          }
+        };
+      } catch (e) {
+        console.warn('BroadcastChannel error:', e);
+      }
+    }
+
+    // 2. Storage event fallback para entornos restringidos
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'pb_mesh_event' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed && parsed.senderTabId !== State.tabId) {
+            handleRemotePeerData(parsed);
+          }
+        } catch (err) {}
+      }
+    });
+
+    // 3. Anuncio inicial de presencia
+    setTimeout(() => {
+      sendPeerMessage({
+        type: 'peer_hello',
+        name: State.profile.name,
+        color: State.profile.color,
+        x: State.room.avatarX,
+        y: State.room.avatarY,
+        station: State.room.selectedStation
+      });
+    }, 150);
+
+    // 4. Heartbeat periódico cada 3 segundos
+    setInterval(() => {
+      sendPeerMessage({
+        type: 'peer_heartbeat',
+        name: State.profile.name,
+        color: State.profile.color,
+        x: State.room.avatarX,
+        y: State.room.avatarY,
+        station: State.room.selectedStation
+      });
+
+      // Desconexión por inactividad si hace más de 7 segundos no hay pulso y no hay P2P activo
+      if (State.room.peer.connected && State.room.peer.lastSeen && (Date.now() - State.room.peer.lastSeen > 7000) && !State.p2p.connected) {
+        State.room.peer.connected = false;
+        updateRoomPresence();
+      }
+    }, 3000);
+
+    // 5. Despedida limpia al cerrar ventana
+    window.addEventListener('beforeunload', () => {
+      sendPeerMessage({ type: 'peer_bye' });
+    });
+  }
+
   function initPeerJS() {
+    initMesh();
+
     if (typeof Peer === 'undefined') return;
 
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('sala');
     if (roomParam) {
       setTimeout(() => joinPeerRoom(roomParam.toUpperCase()), 600);
+    } else {
+      // Si no hay sala en la URL, auto-generar roomCode para compartir fácilmente
+      State.p2p.roomCode = Math.floor(1000 + Math.random() * 9000);
     }
   }
 
   function createPeerRoom() {
     if (typeof Peer === 'undefined') {
-      toast('PeerJS no está disponible en este navegador. Usando simulación local.');
+      toast('PeerJS no disponible. La sincronización local (Mesh) está activa en este equipo.');
       return;
     }
 
@@ -1916,11 +1997,7 @@
 
       State.p2p.peer.on('open', () => {
         updateP2PStatus('waiting', `Sala: SALA-${code} (Esperando compañero)`);
-        const shareInput = $('#shareRoomInput');
-        if (shareInput) {
-          const baseUrl = window.location.origin + window.location.pathname;
-          shareInput.value = `${baseUrl}?sala=${code}`;
-        }
+        updateMultiplayerModalUI();
         $('#shareRoomDialog')?.showModal();
         toast(`Sala online creada: SALA-${code}. ¡Comparte el enlace!`);
       });
@@ -1930,7 +2007,6 @@
         toast(`¡Un compañero se unió a tu sala online!`);
       });
 
-      // Recibir llamadas de voz
       State.p2p.peer.on('call', (call) => {
         if (State.voice.localStream) {
           call.answer(State.voice.localStream);
@@ -1948,8 +2024,8 @@
       });
 
       State.p2p.peer.on('error', (err) => {
-        console.error('Peer error:', err);
-        updateP2PStatus('solo', 'Modo Solitario');
+        console.warn('Peer warning:', err);
+        updateP2PStatus('solo', 'Sincronización Mesh Activa');
       });
     } catch (e) {
       console.error(e);
@@ -1994,8 +2070,8 @@
       });
 
       State.p2p.peer.on('error', () => {
-        updateP2PStatus('solo', 'No se encontró la sala');
-        toast('No se pudo conectar a la sala. Verifica el código.');
+        updateP2PStatus('solo', 'No se encontró sala remota');
+        toast('No se encontró sala remota. La sincronización local sigue activa.');
       });
     } catch (e) {
       console.error(e);
@@ -2007,18 +2083,20 @@
 
     conn.on('open', () => {
       State.p2p.connected = true;
+      State.room.peer.connected = true;
       updateP2PStatus('connected', `🟢 Conectado en vivo (SALA-${State.p2p.roomCode})`);
       window.sounds && window.sounds.playSuccess();
       toast('¡Conexión P2P en tiempo real establecida!');
-      conn.send({ type: 'hello', name: State.profile.name });
+      
       conn.send({
         type: 'peer_hello',
         name: State.profile.name,
         color: State.profile.color,
         x: State.room.avatarX,
-        y: State.room.avatarY
+        y: State.room.avatarY,
+        station: State.room.selectedStation,
+        senderTabId: State.tabId
       });
-      State.room.peer.connected = true;
       updateRoomPresence();
     });
 
@@ -2030,19 +2108,40 @@
       State.p2p.connected = false;
       updateP2PStatus('solo', 'Compañero desconectado');
       toast('El compañero se desconectó de la sala.');
+      updateRoomPresence();
     });
   }
 
   function sendPeerMessage(msg) {
+    const payload = {
+      ...msg,
+      senderTabId: State.tabId,
+      _t: Date.now()
+    };
+
+    // 1. BroadcastChannel (entre ventanas y pestañas del mismo equipo)
+    if (window.roomBroadcastChannel) {
+      try {
+        window.roomBroadcastChannel.postMessage(payload);
+      } catch (e) {}
+    }
+
+    // 2. Storage event fallback
+    try {
+      localStorage.setItem('pb_mesh_event', JSON.stringify(payload));
+    } catch (e) {}
+
+    // 3. WebRTC PeerJS (entre diferentes ordenadores)
     if (State.p2p.connection && State.p2p.connected) {
       try {
-        State.p2p.connection.send(msg);
+        State.p2p.connection.send(payload);
       } catch (e) {}
     }
   }
 
   function handleRemotePeerData(data) {
     if (!data) return;
+    if (data.senderTabId && data.senderTabId === State.tabId) return;
 
     switch (data.type) {
       case 'draw_down':
@@ -2078,7 +2177,6 @@
         break;
 
       case 'win':
-        // CORTA EL LOOP: broadcast = false para no re-transmitir de vuelta
         executeRoundWin(data.winnerName, data.word, false);
         break;
 
@@ -2109,33 +2207,82 @@
         break;
 
       case 'peer_hello':
+      case 'peer_heartbeat': {
+        const wasDisconnected = !State.room.peer.connected;
         State.room.peer.connected = true;
-        State.room.peer.name = data.name || 'Compañero';
-        State.room.peer.color = data.color || '#B79CE0';
-        State.room.peer.x = data.x || 38;
-        State.room.peer.y = data.y || 48;
-        updateRoomPresence();
-        sendPeerMessage({
-          type: 'peer_hello_back',
-          name: State.profile.name,
-          color: State.profile.color,
-          x: State.room.avatarX,
-          y: State.room.avatarY
-        });
-        toast(`🟢 ${State.room.peer.name} está presente en la sala.`);
-        break;
+        State.room.peer.lastSeen = Date.now();
+        State.room.peer.tabId = data.senderTabId;
 
-      case 'peer_hello_back':
+        // Si ambos usuarios tienen el nombre por defecto 'Tú', diferenciamos al compañero
+        if (data.name === 'Tú' && State.profile.name === 'Tú') {
+          State.room.peer.name = 'Compañero (En vivo)';
+        } else {
+          State.room.peer.name = data.name || 'Compañero';
+        }
+
+        // Color agradable y distintivo si ambos tienen el verde estándar
+        if (data.color === State.profile.color && State.profile.color === '#5F9E82') {
+          State.room.peer.color = '#B79CE0';
+        } else {
+          State.room.peer.color = data.color || '#B79CE0';
+        }
+
+        if (data.x != null) State.room.peer.x = data.x;
+        if (data.y != null) State.room.peer.y = data.y;
+        if (data.station !== undefined) State.room.peer.station = data.station;
+
+        updateRoomPresence();
+
+        if (data.type === 'peer_hello') {
+          sendPeerMessage({
+            type: 'peer_hello_back',
+            name: State.profile.name,
+            color: State.profile.color,
+            x: State.room.avatarX,
+            y: State.room.avatarY,
+            station: State.room.selectedStation
+          });
+          if (wasDisconnected) {
+            toast(`🟢 ${State.room.peer.name} está presente en la sala.`);
+            window.sounds && window.sounds.playPop();
+          }
+        }
+        break;
+      }
+
+      case 'peer_hello_back': {
+        const wasDisconnected = !State.room.peer.connected;
         State.room.peer.connected = true;
-        State.room.peer.name = data.name || 'Compañero';
-        State.room.peer.color = data.color || '#B79CE0';
-        State.room.peer.x = data.x || 38;
-        State.room.peer.y = data.y || 48;
-        updateRoomPresence();
-        toast(`🟢 ${State.room.peer.name} está presente en la sala.`);
-        break;
+        State.room.peer.lastSeen = Date.now();
+        State.room.peer.tabId = data.senderTabId;
 
-      case 'peer_walk':
+        if (data.name === 'Tú' && State.profile.name === 'Tú') {
+          State.room.peer.name = 'Compañero (En vivo)';
+        } else {
+          State.room.peer.name = data.name || 'Compañero';
+        }
+
+        if (data.color === State.profile.color && State.profile.color === '#5F9E82') {
+          State.room.peer.color = '#B79CE0';
+        } else {
+          State.room.peer.color = data.color || '#B79CE0';
+        }
+
+        if (data.x != null) State.room.peer.x = data.x;
+        if (data.y != null) State.room.peer.y = data.y;
+        if (data.station !== undefined) State.room.peer.station = data.station;
+
+        updateRoomPresence();
+        if (wasDisconnected) {
+          toast(`🟢 ${State.room.peer.name} está presente en la sala.`);
+          window.sounds && window.sounds.playPop();
+        }
+        break;
+      }
+
+      case 'peer_walk': {
+        State.room.peer.connected = true;
+        State.room.peer.lastSeen = Date.now();
         State.room.peer.x = data.x;
         State.room.peer.y = data.y;
         const peerAv = $('#roomPeerAvatar');
@@ -2147,14 +2294,25 @@
           setTimeout(() => peerAv.classList.remove('walking'), 650);
         }
         break;
+      }
 
-      case 'peer_station':
+      case 'peer_station': {
+        State.room.peer.connected = true;
+        State.room.peer.lastSeen = Date.now();
         State.room.peer.station = data.stationTitle || data.stationKey;
         const peerStatus = $('#roomPeerAvatarStatus');
         if (peerStatus) {
           peerStatus.textContent = data.stationKey ? `En ${data.stationTitle || data.stationKey}` : 'En descanso';
         }
         break;
+      }
+
+      case 'peer_profile_update': {
+        if (data.name) State.room.peer.name = data.name;
+        if (data.color) State.room.peer.color = data.color;
+        updateRoomPresence();
+        break;
+      }
 
       case 'draw_role':
         State.draw.role = data.role;
@@ -2163,305 +2321,46 @@
         updateDrawRoleUI();
         toast(State.draw.role === 'drawer' ? '🎨 Tu compañero te pasó el turno de dibujar.' : '🔍 Tu compañero tiene el pincel. ¡Intenta adivinar en el chat!');
         break;
+
+      case 'peer_bye':
+        State.room.peer.connected = false;
+        updateRoomPresence();
+        toast('El compañero salió de la sala.');
+        break;
     }
   }
 
   function updateP2PStatus(status, text) {
     const el = $('#p2pStatusLabel');
     const textEl = $('#p2pStatusText');
-    if (!el || !textEl) return;
-    el.className = `p2p-status ${status}`;
-    textEl.textContent = text;
+    if (el) el.className = `p2p-status ${status}`;
+    if (textEl) textEl.textContent = text;
   }
 
-  // ==========================================
-  // 10. MOMENTO POST-PARTIDA ("LA CAFETERÍA")
-  // ==========================================
-  function renderPostGameScreen() {
-    State.profile.stats.breaks++;
-    saveProfileStats();
-
-    const avatarsContainer = $('#postgameAvatars');
-    let participants = [{ name: State.profile.name, color: State.profile.color, isMe: true }];
-
-    if (State.simulatedCompanionsEnabled) {
-      participants.push(...State.virtualFriends);
+  function updateMultiplayerModalUI() {
+    const banner = $('#p2pStatusBannerText');
+    const shareInput = $('#shareRoomInput');
+    
+    if (!State.p2p.roomCode) {
+      State.p2p.roomCode = Math.floor(1000 + Math.random() * 9000);
     }
-    State.draw.players.forEach(p => participants.push({ name: p, color: '#9B653C' }));
-
-    avatarsContainer.innerHTML = participants.map(p => `
-      <div class="avatar lg" data-avatar-name="${escapeHtml(p.name)}" id="${p.isMe ? 'postgameMyAvatar' : ''}" style="--c:${p.color}">
-        <span class="avatar-smile"></span>
-        <span class="avatar-tag">${escapeHtml(p.name)}</span>
-      </div>
-    `).join('');
-
-    generatePersonalizedIcebreaker();
-
-    // Si el usuario eligió "Con voz" en su perfil, sugerir activar el micro
-    if (State.profile.mode === 'voz' && !State.voice.enabled) {
-      toast('💡 Tu perfil prefiere voz: Puedes activar el micrófono en la barra inferior.');
-    }
-  }
-
-  function generatePersonalizedIcebreaker() {
-    const userTags = State.profile.tags;
-    let questionsPool = [];
-    let activeTag = null;
-
-    if (userTags && userTags.length > 0) {
-      activeTag = userTags[Math.floor(Math.random() * userTags.length)];
-      if (ICEBREAKER_BY_TAG[activeTag]) {
-        questionsPool = ICEBREAKER_BY_TAG[activeTag];
-      }
+    
+    if (shareInput) {
+      const baseUrl = window.location.origin + window.location.pathname;
+      shareInput.value = `${baseUrl}?sala=${State.p2p.roomCode}`;
     }
 
-    if (!questionsPool.length) {
-      questionsPool = DEFAULT_ICEBREAKERS;
-    }
-
-    const q = questionsPool[Math.floor(Math.random() * questionsPool.length)];
-    const el = $('#icebreakerQuestion');
-    const tagBadge = $('#icebreakerTagBadge');
-
-    if (el) {
-      el.textContent = `«${q}»`;
-    }
-    if (tagBadge) {
-      tagBadge.textContent = activeTag ? `🎯 Pregunta afinada a tus gustos (${activeTag})` : `☕ Pregunta para charlar`;
-    }
-  }
-
-  // ==========================================
-  // 11. PERFIL Y PERSONALIZACIÓN ("TU RINCÓN")
-  // ==========================================
-  const SWATCH_COLORS = ['#C98B5B', '#D96951', '#5B9BC4', '#5F9E82', '#E5A338', '#9B653C', '#7B68EE', '#E06D8C'];
-  const AVAILABLE_TAGS = ['Cine', 'Series', 'Videojuegos', 'Música', 'Senderismo', 'Cocina', 'Lectura', 'Fútbol', 'Café', 'Mascotas', 'Fotografía', 'Viajes'];
-
-  function renderProfileScreen() {
-    $('#profileNameInput').value = State.profile.name;
-    updateProfileAvatarPreview();
-
-    const swatches = $('#colorSwatches');
-    swatches.innerHTML = SWATCH_COLORS.map(c => `
-      <button type="button" class="swatch-btn ${c === State.profile.color ? 'active' : ''}" 
-        style="--c:${c}" data-swatch="${c}" aria-label="Color ${c}"></button>
-    `).join('');
-
-    const tagsCloud = $('#profileTagsCloud');
-    tagsCloud.innerHTML = AVAILABLE_TAGS.map(t => {
-      const active = State.profile.tags.includes(t);
-      return `<button type="button" class="tag-btn" data-tag="${t}" aria-pressed="${active}">${escapeHtml(t)}</button>`;
-    }).join('');
-
-    $$('input[name="prefModo"]').forEach(radio => {
-      radio.checked = radio.value === State.profile.mode;
-    });
-
-    $('#statBreaks').textContent = State.profile.stats.breaks;
-    $('#statDrawings').textContent = State.profile.stats.drawings;
-    $('#statWords').textContent = State.profile.stats.words;
-
-    // Nivel y barra de bienestar
-    renderLevelAndAchievements();
-  }
-
-  function renderLevelAndAchievements() {
-    const totalBreaks = State.profile.stats.breaks;
-    let levelTitle = "Nivel 1: 🌱 Novato del Descanso";
-    let progressPct = Math.min((totalBreaks / 5) * 100, 100);
-
-    if (totalBreaks >= 10) {
-      levelTitle = "Nivel 3: 🌳 Maestro Zen del Bienestar";
-      progressPct = 100;
-    } else if (totalBreaks >= 5) {
-      levelTitle = "Nivel 2: 🌿 Amigo de las Pausas";
-      progressPct = Math.min(((totalBreaks - 5) / 5) * 100, 100);
-    }
-
-    const titleEl = $('#profileLevelTitle');
-    const barEl = $('#profileLevelProgressBar');
-    if (titleEl) titleEl.textContent = levelTitle;
-    if (barEl) barEl.style.width = `${progressPct}%`;
-
-    // Renderizar logros
-    const achList = $('#achievementsGrid');
-    if (!achList) return;
-
-    const achs = [
-      { key: 'picasso', icon: '🎨', title: 'Picasso del Break', desc: 'Gana 1 ronda de dibujo', unlocked: State.profile.achievements.picasso },
-      { key: 'wordsmith', icon: '🔤', title: 'Diccionario Ágil', desc: 'Aporta 3 palabras encadenadas', unlocked: State.profile.achievements.wordsmith },
-      { key: 'trivia', icon: '⚡', title: 'Mente Brillante', desc: 'Gana 200+ pts en Trivia Relámpago', unlocked: State.profile.achievements.trivia },
-      { key: 'pasillo', icon: '💬', title: 'Alma del Pasillo', desc: 'Deja una nota en el café', unlocked: State.profile.achievements.pasillo }
-    ];
-
-    achList.innerHTML = achs.map(a => `
-      <div class="achievement-badge ${a.unlocked ? 'unlocked' : 'locked'}">
-        <div class="ach-icon">${a.icon}</div>
-        <div>
-          <b>${escapeHtml(a.title)}</b>
-          <small>${escapeHtml(a.desc)}</small>
-        </div>
-        <span class="ach-status">${a.unlocked ? '✅ Desbloqueado' : '🔒 Pendiente'}</span>
-      </div>
-    `).join('');
-  }
-
-  function updateProfileAvatarPreview() {
-    const preview = $('#profileAvatarPreview');
-    if (preview) preview.style.setProperty('--c', State.profile.color);
-    const sideAv = $('#sidebarUserAvatar');
-    if (sideAv) sideAv.style.setProperty('--c', State.profile.color);
-    const sideName = $('#sidebarUserName');
-    if (sideName) sideName.textContent = State.profile.name;
-    const roomAv = $('#roomMyAvatar');
-    if (roomAv) roomAv.style.setProperty('--c', State.profile.color);
-    const roomName = $('#roomMyAvatarName');
-    if (roomName) roomName.textContent = State.profile.name;
-  }
-
-  function saveProfileStats() {
-    localStorage.setItem('pb_stats', JSON.stringify(State.profile.stats));
-  }
-
-  function saveProfile() {
-    const name = $('#profileNameInput').value.trim() || 'Tú';
-    State.profile.name = name;
-    localStorage.setItem('pb_name', name);
-
-    const mode = $('input[name="prefModo"]:checked')?.value || 'texto';
-    State.profile.mode = mode;
-    localStorage.setItem('pb_mode', mode);
-
-    localStorage.setItem('pb_tags', JSON.stringify(State.profile.tags));
-    localStorage.setItem('pb_color', State.profile.color);
-
-    updateProfileAvatarPreview();
-    updateRecommendedRoomBadge();
-
-    window.sounds && window.sounds.playSuccess();
-    toast('¡Perfil y preferencias guardados con éxito!');
-  }
-
-  function checkAndUnlockAchievement(key) {
-    if (!State.profile.achievements) {
-      State.profile.achievements = { picasso: false, wordsmith: false, trivia: false, pasillo: false };
-    }
-    if (!State.profile.achievements[key]) {
-      State.profile.achievements[key] = true;
-      localStorage.setItem('pb_achievements', JSON.stringify(State.profile.achievements));
-      const names = {
-        picasso: '🎨 Picasso del Break (Ronda ganada)',
-        wordsmith: '🔤 Diccionario Ágil (3 palabras aportadas)',
-        trivia: '⚡ Mente Brillante (Experto en Trivia)',
-        pasillo: '💬 Alma del Pasillo (Nota en el café)'
-      };
-      toast(`🏆 ¡Logro desbloqueado: ${names[key] || key}!`);
-      window.sounds && window.sounds.playSuccess();
-      triggerConfetti();
-      renderLevelAndAchievements();
-    }
-  }
-
-  function updateRecommendedRoomBadge() {
-    $$('.recommend-badge').forEach(el => el.remove());
-    $$('.room-card').forEach(el => el.classList.remove('recommended'));
-
-    const mode = State.profile.mode || 'texto';
-    if (mode === 'turnos') {
-      const card = $('.room-card.async');
-      if (card) {
-        card.classList.add('recommended');
-        const b = document.createElement('div');
-        b.className = 'recommend-badge';
-        b.innerHTML = '✨ Recomendada para ti (Modo Asíncrono)';
-        card.prepend(b);
-      }
-    } else if (mode === 'voz') {
-      const card = $('.room-card.live');
-      if (card) {
-        card.classList.add('recommended');
-        const b = document.createElement('div');
-        b.className = 'recommend-badge';
-        b.innerHTML = '🎙️ Recomendada para ti (Modo Voz)';
-        card.prepend(b);
-      }
-    } else { // texto
-      const card = $('.room-card.chat');
-      if (card) {
-        card.classList.add('recommended');
-        const b = document.createElement('div');
-        b.className = 'recommend-badge';
-        b.innerHTML = '💬 Recomendada para ti (Solo Texto)';
-        card.prepend(b);
-      }
-    }
-
-    const sideName = $('#sidebarUserName');
-    const sideAv = $('#sidebarUserAvatar');
-    if (sideName) sideName.textContent = State.profile.name;
-    if (sideAv) sideAv.style.setProperty('--c', State.profile.color);
-  }
-
-  // ==========================================
-  // 12. CONFETI NATIVO (CANVAS)
-  // ==========================================
-  function triggerConfetti() {
-    const cvs = $('#confettiCanvas');
-    if (!cvs || !cvs.getContext) return;
-    const c = cvs.getContext('2d');
-    if (!c) return;
-    cvs.width = window.innerWidth;
-    cvs.height = window.innerHeight;
-
-    const colors = ['#7A4E2D', '#D96951', '#5B9BC4', '#5F9E82', '#E5A338', '#FFFFFF'];
-    const particles = [];
-
-    for (let i = 0; i < 75; i++) {
-      particles.push({
-        x: cvs.width / 2 + (Math.random() - 0.5) * 200,
-        y: cvs.height / 2 + (Math.random() - 0.5) * 100,
-        vx: (Math.random() - 0.5) * 12,
-        vy: -Math.random() * 10 - 4,
-        size: Math.random() * 8 + 4,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        rotation: Math.random() * 360,
-        vr: (Math.random() - 0.5) * 10,
-        opacity: 1
-      });
-    }
-
-    let frames = 0;
-    function animate() {
-      c.clearRect(0, 0, cvs.width, cvs.height);
-      particles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.3;
-        p.rotation += p.vr;
-        p.opacity -= 0.012;
-
-        c.save();
-        c.translate(p.x, p.y);
-        c.rotate((p.rotation * Math.PI) / 180);
-        c.fillStyle = p.color;
-        c.globalAlpha = Math.max(p.opacity, 0);
-        c.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-        c.restore();
-      });
-
-      frames++;
-      if (frames < 90) {
-        requestAnimationFrame(animate);
+    if (banner) {
+      if (State.room.peer.connected) {
+        banner.innerHTML = `🟢 <b>En vivo con:</b> ${State.room.peer.name} (${State.p2p.connected ? 'WebRTC Remoto' : 'Mesh Local Instantáneo'})`;
       } else {
-        c.clearRect(0, 0, cvs.width, cvs.height);
+        banner.innerHTML = `⚪ Esperando conexión. Abre otra ventana en este equipo para probar o comparte el enlace.`;
       }
     }
-    animate();
   }
 
   // ==========================================
-  // 13. MANEJADORES DE EVENTOS
+  // 10. GESTIÓN DE EVENTOS Y ENLACES
   // ==========================================
   function setupEventListeners() {
     document.addEventListener('click', (e) => {
@@ -2673,6 +2572,11 @@
 
       case 'switch-view':
         setRoomView(btn.dataset.view);
+        break;
+
+      case 'open-multiplayer':
+        updateMultiplayerModalUI();
+        $('#shareRoomDialog')?.showModal();
         break;
 
       case 'toggle-draw-role':

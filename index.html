@@ -130,9 +130,14 @@
                   📋 Vista de Rincones
                 </button>
               </div>
-              <span class="room-presence-badge" id="roomPresenceBadge">
-                🟢 <span id="roomOnlineCount">4</span> compañeros en la sala
-              </span>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span class="room-presence-badge" id="roomPresenceBadge">
+                  🟢 <span id="roomOnlineCount">4</span> compañeros en la sala
+                </span>
+                <button type="button" class="btn alt sm" id="btnOpenOnlineModal" data-act="open-multiplayer" title="Conectar con otro usuario real en tiempo real" style="padding:4px 12px;font-size:12px;border-radius:20px;font-weight:700">
+                  🌐 Sala Online P2P
+                </button>
+              </div>
             </div>
 
             <!-- ========================================================
@@ -823,15 +828,30 @@
   <!-- Diálogo Nativo: Compartir Sala Online / Invitar -->
   <dialog id="shareRoomDialog">
     <div class="modal-card">
-      <h2>🔗 Invitar a un Compañero en Línea</h2>
+      <h2>🌐 Conectar con Compañeros en Vivo</h2>
       <p style="color:var(--soft);margin:var(--s2) 0 var(--s3);font-size:14px">
-        Comparte este enlace o tu código de sala para que un compañero juegue contigo en tiempo real por WebRTC.
+        PlayBreak sincroniza automáticamente las pestañas abiertas en este equipo (Mesh Local), y permite conectar dos ordenadores en vivo vía WebRTC P2P.
       </p>
-      <input type="text" id="shareRoomInput" readonly value="https://hinarasm12.github.io/PlayBreak/" 
-        style="width:100%;padding:10px 14px;border:2px solid var(--line);border-radius:var(--r-pill);background:var(--bg);text-align:center;font-weight:700;margin-bottom:var(--s3)">
-      <div class="actions-row center">
-        <button type="button" class="btn" data-act="copy-invite-link">Copiar Enlace</button>
-        <button type="button" class="btn alt" onclick="document.getElementById('shareRoomDialog').close()">Cerrar</button>
+      
+      <!-- Estado de presencia actual -->
+      <div id="p2pStatusBanner" style="padding:10px 14px;border-radius:var(--r-md);background:var(--card);border:1.5px solid var(--line);margin-bottom:var(--s3);font-size:13px;display:flex;align-items:center;gap:8px">
+        <span class="dot" style="background:var(--ok)"></span>
+        <span id="p2pStatusBannerText">Sincronización activa. Esperando a otro compañero...</span>
+      </div>
+
+      <div style="margin-bottom:var(--s3)">
+        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--soft)">ENLACE DIRECTO DE INVITACIÓN (CÓDIGO DE SALA):</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="shareRoomInput" readonly value="https://hinarasm12.github.io/PlayBreak/" 
+            style="flex:1;padding:8px 12px;border:2px solid var(--line);border-radius:var(--r-pill);background:var(--bg);font-weight:700;font-size:13px">
+          <button type="button" class="btn sm" data-act="copy-invite-link">📋 Copiar</button>
+        </div>
+      </div>
+
+      <div class="actions-row center" style="gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn alt sm" data-act="create-room">🔄 Nueva Sala P2P</button>
+        <button type="button" class="btn alt sm" data-act="prompt-join-room">🔢 Unirse con Código</button>
+        <button type="button" class="btn alt sm" onclick="document.getElementById('shareRoomDialog').close()">Cerrar</button>
       </div>
     </div>
   </dialog>
