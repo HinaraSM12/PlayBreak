@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlayBreak · Sala de Descanso y Rompehielos Lúdico</title>
+  <meta name="description" content="PlayBreak es un espacio lúdico de baja fricción para equipos remotos e híbridos que reduce la fatiga y el aislamiento con micro-pausas voluntarias.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☕</text></svg>">
+</head>
+<body>
+
+  <!-- Contenedor Universal de la Aplicación -->
+  <div class="app-container">
+
+    <!-- 1. Barra Lateral de Navegación -->
+    <nav class="sidebar" aria-label="Navegación principal">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">☕</div>
+        <div class="brand-title">PlayBreak</div>
+        <span class="brand-badge">v3.5</span>
+      </div>
+
+      <div class="nav-links">
+        <button type="button" class="nav-btn active" data-go="mapa" id="nav-mapa">
+          <span class="icon">🏠</span>
+          <span class="text">Sala Principal</span>
+        </button>
+        <button type="button" class="nav-btn" data-go="dibujo" id="nav-dibujo">
+          <span class="icon">🎨</span>
+          <span class="text">Mesa de Dibujo</span>
+          <span class="nav-badge">En vivo</span>
+        </button>
+        <button type="button" class="nav-btn" data-go="turnos" id="nav-turnos">
+          <span class="icon">🔤</span>
+          <span class="text">Rincón Palabras</span>
+          <span class="nav-badge">Turnos</span>
+        </button>
+        <button type="button" class="nav-btn" data-go="trivia" id="nav-trivia">
+          <span class="icon">⚡</span>
+          <span class="text">Trivia Relámpago</span>
+        </button>
+        <button type="button" class="nav-btn" data-go="perfil" id="nav-perfil">
+          <span class="icon">👤</span>
+          <span class="text">Tu Rincón</span>
+        </button>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="user-mini-card" data-go="perfil" title="Ir a tu perfil y personalizar avatar">
+          <div class="avatar" id="sidebarUserAvatar" style="--c:#C98B5B">
+            <span class="avatar-smile"></span>
+          </div>
+          <div class="user-mini-info">
+            <div class="user-mini-name" id="sidebarUserName">Tú</div>
+            <div class="user-mini-status">En tu descanso</div>
+          </div>
+        </div>
+        <div class="philosophy-note">
+          «Aquí nada es obligatorio ni evaluado»
+        </div>
+      </div>
+    </nav>
+
+    <!-- 2. Área Principal de Contenido -->
+    <main class="main-content">
+
+      <!-- Barra Superior de Demostración & Evaluación HCI -->
+      <header class="top-toolbar" id="topToolbar" aria-label="Herramientas de evaluación">
+        <span class="proto-label">Flujos de Evaluación</span>
+        <div class="proto-pills" role="tablist">
+          <button type="button" class="proto-pill active" data-go="mapa">1 · Sala</button>
+          <button type="button" class="proto-pill" data-go="dibujo">2 · Dibujo</button>
+          <button type="button" class="proto-pill" data-go="turnos">3 · Palabras</button>
+          <button type="button" class="proto-pill" data-go="trivia">4 · Trivia</button>
+          <button type="button" class="proto-pill" data-go="fin">5 · Cafetería</button>
+          <button type="button" class="proto-pill" data-go="perfil">6 · Perfil</button>
+        </div>
+
+        <div class="toolbar-controls">
+          <button type="button" class="ctrl-btn" id="soundToggleBtn" title="Activar/Silenciar efectos de sonido">🔔 Sonido ON</button>
+          <button type="button" class="ctrl-btn" id="themeToggleBtn" title="Cambiar tema visual">🌙 Modo Noche</button>
+          <button type="button" class="ctrl-btn" data-act="toggle-proto-bar" title="Ocultar para pruebas con usuarios sin distracciones">Ocultar barra</button>
+          <button type="button" class="ctrl-btn" data-act="reset-all-data" title="Reiniciar datos locales">↺ Reiniciar</button>
+        </div>
+      </header>
+
+      <!-- Botón flotante para restaurar la barra de pruebas si está oculta -->
+      <button type="button" class="ctrl-btn" id="showProtoBtn" data-act="toggle-proto-bar" 
+        style="position:fixed;bottom:16px;right:16px;z-index:90;box-shadow:var(--shadow-md)" hidden>
+        ⚙️ Mostrar barra de flujos
+      </button>
+
+      <!-- Contenedor Desplazable de Pantallas -->
+      <div class="viewport">
+
+        <!-- ========================================================
+             PANTALLA 1: LA SALA DE DESCANSO (THE HUB)
+             ======================================================== -->
+        <section class="screen-view active" id="screen-mapa" aria-labelledby="heading-mapa">
+          <div class="page-col">
+            <div class="header-banner">
+              <div>
+                <h1 id="heading-mapa">La Sala de Descanso</h1>
+                <p class="subtitle">Tómate 5 minutos. Elige cómo quieres despejar la mente hoy.</p>
+              </div>
+              <span class="status-pill">
+                <span class="dot"></span>
+                Espacio Abierto
+              </span>
+            </div>
+
+            <!-- Grilla de Rincones Lúdicos -->
+            <div class="rooms-grid">
+              
+              <!-- Rincón 1: Mesa de Dibujo -->
+              <article class="room-card live">
+                <div class="room-icon-badge">🎨</div>
+                <span class="room-tag live">En vivo · Sincrónico</span>
+                <h2>Mesa de Dibujo</h2>
+                <p style="color:var(--soft);font-size:14px">
+                  Dibuja y adivina con tus compañeros en tiempo real. Un rompehielos natural para reírse de los garabatos.
+                </p>
+                <div class="room-footer">
+                  <span style="font-size:12.5px;color:var(--soft);font-weight:700">Partidas cortas (1 min)</span>
+                  <button type="button" class="btn sm" data-go="dibujo">Entrar a dibujar</button>
+                </div>
+              </article>
+
+              <!-- Rincón 2: Rincón de Palabras -->
+              <article class="room-card async">
+                <div class="room-icon-badge">🔤</div>
+                <span class="room-tag async">Por turnos · Asincrónico</span>
+                <h2>Rincón de Palabras</h2>
+                <p style="color:var(--soft);font-size:14px">
+                  Cadena de palabras colectiva. Deja tu jugada cuando puedas sin coincidir en horario con nadie.
+                </p>
+                <div class="room-footer">
+                  <span style="font-size:12.5px;color:var(--soft);font-weight:700">Sin límite de tiempo</span>
+                  <button type="button" class="btn sm light" data-go="turnos">Dejar jugada</button>
+                </div>
+              </article>
+
+              <!-- Rincón 3: Trivia Relámpago -->
+              <article class="room-card trivia">
+                <div class="room-icon-badge">⚡</div>
+                <span class="room-tag quick">Rompehielos Rápido</span>
+                <h2>Trivia Relámpago</h2>
+                <p style="color:var(--soft);font-size:14px">
+                  3 preguntas ligeras sobre gustos de café, hábitos de descanso y teletrabajo.
+                </p>
+                <div class="room-footer">
+                  <span style="font-size:12.5px;color:var(--soft);font-weight:700">Duración: 45 segundos</span>
+                  <button type="button" class="btn sm alt" data-go="trivia">Jugar trivia</button>
+                </div>
+              </article>
+
+            </div>
+
+            <!-- Caja de Claridad de Estado Inicial y Simulación Transparente (Resuelve dolor R2) -->
+            <div class="companion-toggle-box">
+              <div class="companion-toggle-text">
+                <h4>🧪 Modo de Demostración & Compañeros Virtuales</h4>
+                <p>
+                  Por defecto la sala empieza limpia (solo estás tú). Si estás probando la app a solas, activa los compañeros simulados (Sara, Tomás, Lucía) para ver cómo funciona el multijugador.
+                </p>
+              </div>
+              <label style="display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer">
+                <input type="checkbox" id="toggleSimulatedCompanions" style="width:18px;height:18px;accent-color:var(--accent)">
+                <span>Activar compañeros de prueba</span>
+              </label>
+            </div>
+
+            <div class="actions-row center" style="margin-top:var(--s4)">
+              <button type="button" class="btn alt sm" data-act="share-room">
+                🔗 Invitar a un compañero con enlace
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================================
+             PANTALLA 2: MESA DE DIBUJO (EN VIVO / ADIVINAR / LIBRE)
+             ======================================================== -->
+        <section class="screen-view" id="screen-dibujo" aria-labelledby="heading-dibujo">
+          <div class="page-col">
+            <div class="screen-header">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                <h1 id="heading-dibujo">Mesa de Dibujo</h1>
+                <div style="display:flex;gap:6px">
+                  <button type="button" class="btn alt sm" data-act="toggle-draw-mode" id="toggleDrawModeBtn">Modo: Adivinar</button>
+                  <button type="button" class="btn alt sm" data-act="toggle-timer-limit" id="toggleTimerBtn">Tiempo: 60 s</button>
+                  <button type="button" class="btn alt sm" data-act="next-word">Cambiar palabra</button>
+                </div>
+              </div>
+              <p class="subtitle" id="drawSubtitle">Traza sobre el lienzo. El tiempo comienza automáticamente cuando dibujas.</p>
+            </div>
+
+            <!-- Contenedor del Canvas -->
+            <div class="card" style="padding:var(--s2)">
+              <div class="canvas-topbar">
+                <div class="secret-word-box">
+                  <span class="secret-chip" id="drawTopicTag">Adivinar: 4 letras</span>
+                  <span style="font-size:13px;font-weight:700;color:var(--soft)" id="drawHintText">Pista: Animal doméstico</span>
+                </div>
+                <div class="timer-chip" id="drawTimerDisplay" role="timer" aria-live="polite">1:00</div>
+              </div>
+
+              <div class="canvas-wrapper">
+                <canvas id="drawCanvas" aria-label="Lienzo de dibujo interactivo"></canvas>
+              </div>
+
+              <!-- Barra de Herramientas de Dibujo -->
+              <div class="drawing-toolbar">
+                <!-- Selector de Color -->
+                <div class="color-palette" role="group" aria-label="Colores de trazo">
+                  <button type="button" class="color-btn active" style="--c:#3A2E25" data-draw-color="#3A2E25" aria-label="Café oscuro"></button>
+                  <button type="button" class="color-btn" style="--c:#7A4E2D" data-draw-color="#7A4E2D" aria-label="Madera"></button>
+                  <button type="button" class="color-btn" style="--c:#D96951" data-draw-color="#D96951" aria-label="Terracota"></button>
+                  <button type="button" class="color-btn" style="--c:#E5A338" data-draw-color="#E5A338" aria-label="Mostaza"></button>
+                  <button type="button" class="color-btn" style="--c:#5F9E82" data-draw-color="#5F9E82" aria-label="Salvia"></button>
+                  <button type="button" class="color-btn" style="--c:#5B9BC4" data-draw-color="#5B9BC4" aria-label="Cielo"></button>
+                  <button type="button" class="color-btn" style="--c:#FFFFFF" data-draw-color="#FFFFFF" aria-label="Borrador blanco" title="Borrador"></button>
+                </div>
+
+                <!-- Grosor de Pincel -->
+                <div class="brush-sizes" role="group" aria-label="Grosor de pincel">
+                  <button type="button" class="brush-btn active" data-brush-size="3" title="Fino"><span class="dot" style="width:4px;height:4px"></span></button>
+                  <button type="button" class="brush-btn" data-brush-size="6" title="Medio"><span class="dot" style="width:8px;height:8px"></span></button>
+                  <button type="button" class="brush-btn" data-brush-size="12" title="Grueso"><span class="dot" style="width:12px;height:12px"></span></button>
+                </div>
+
+                <!-- Acciones Rápidas del Lienzo -->
+                <div class="canvas-actions">
+                  <button type="button" class="btn alt sm" data-act="undo-canvas" title="Deshacer trazo">↶ Deshacer</button>
+                  <button type="button" class="btn alt sm" data-act="clear-canvas" title="Limpiar lienzo">🗑️ Borrar</button>
+                  <button type="button" class="btn alt sm" data-act="download-canvas" title="Descargar como PNG">💾 Guardar</button>
+                </div>
+              </div>
+
+              <div class="feedback-msg" id="drawStatusMsg" role="status" aria-live="polite"></div>
+            </div>
+
+            <!-- Sección de Adivinanza en Tiempo Real & Marcador (Requerimientos R1 y R2) -->
+            <div class="guess-section" id="guessSectionBox">
+              <!-- Chat de Adivinanzas -->
+              <div class="guess-chat-box">
+                <div style="padding:6px 12px;background:var(--panel-subtle);font-weight:800;font-size:11.5px;color:var(--soft);text-transform:uppercase;border-bottom:1px solid var(--line)">
+                  💬 Adivinanzas en tiempo real
+                </div>
+                <div class="guess-messages" id="guessMessages" role="log" aria-live="polite">
+                  <div class="guess-msg system">Escribe tu intento en el campo inferior para adivinar...</div>
+                </div>
+                <form class="guess-input-form" id="guessForm">
+                  <input type="text" id="guessInput" placeholder="¿Qué crees que es? Escribe aquí..." autocomplete="off">
+                  <button type="submit" class="btn sm">Adivinar</button>
+                </form>
+              </div>
+
+              <!-- Marcador de Partidas Ganadas (Pedido explícito del Usuario 1) -->
+              <div class="scoreboard-box">
+                <div class="scoreboard-title">
+                  <span>🏆 Marcador</span>
+                  <span style="font-size:11px">Sesión</span>
+                </div>
+                <div class="scoreboard-list" id="scoreboardList">
+                  <!-- Se llena dinámicamente -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Participantes en la Partida -->
+            <div class="card" style="margin-top:var(--s3);padding:var(--s3)">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--s2)">
+                <h3 style="font-size:14px">Quién juega en esta mesa</h3>
+                <span style="font-size:12px;color:var(--soft)">Máximo 5 personas</span>
+              </div>
+              <div class="tags-cloud" id="drawPlayersList"></div>
+
+              <form id="addPlayerForm" style="display:flex;gap:8px;margin-top:var(--s2)">
+                <input type="text" id="addPlayerInput" placeholder="Nombre de un compañero (opcional)" maxlength="16" style="flex:1;padding:6px 12px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--bg)">
+                <button type="submit" class="btn light sm">Agregar</button>
+              </form>
+            </div>
+
+            <!-- Botones de Navegación de la Partida -->
+            <div class="actions-row">
+              <button type="button" class="btn" data-go="fin">Terminar ronda y charlar</button>
+              <button type="button" class="btn alt" data-go="mapa">Volver a la sala</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================================
+             PANTALLA 3: RINCÓN DE PALABRAS (ASÍNCRONO POR TURNOS)
+             ======================================================== -->
+        <section class="screen-view" id="screen-turnos" aria-labelledby="heading-turnos">
+          <div class="page-col">
+            <div class="screen-header">
+              <h1 id="heading-turnos">Rincón de Palabras</h1>
+              <p class="subtitle">
+                Cadena colectiva asíncrona. La regla es simple: cada palabra empieza con la última letra de la anterior.
+              </p>
+            </div>
+
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:var(--s2);border-bottom:1px solid var(--line);margin-bottom:var(--s3)">
+                <span class="status-pill" style="background:var(--sun-soft);color:#8A5D12">
+                  ☕ Tema: Pausa de café y oficina
+                </span>
+                <span style="font-size:12px;color:var(--soft)" id="wordRuleHint">
+                  La siguiente debe empezar con la última letra.
+                </span>
+              </div>
+
+              <!-- Lista de palabras encadenadas -->
+              <div class="word-chain-container" id="wordChainList">
+                <!-- Se llena con las palabras persistidas -->
+              </div>
+
+              <!-- Formulario de Ingreso de Palabra -->
+              <form id="wordForm" class="form-row">
+                <input type="text" id="wordInput" placeholder="Escribe tu palabra..." autocomplete="off">
+                <button type="submit" class="btn">Dejar mi jugada</button>
+              </form>
+              <div class="feedback-msg" id="wordFeedbackMsg" role="status" aria-live="polite"></div>
+            </div>
+
+            <div class="actions-row">
+              <button type="button" class="btn alt" data-go="mapa">Volver a la sala</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================================
+             PANTALLA 4: TRIVIA RELÁMPAGO (MINIJUEGO ADICIONAL)
+             ======================================================== -->
+        <section class="screen-view" id="screen-trivia" aria-labelledby="heading-trivia">
+          <div class="page-col">
+            <div class="screen-header">
+              <h1 id="heading-trivia">Trivia Relámpago</h1>
+              <p class="subtitle">3 preguntas rápidas para descubrir afinidades con tus compañeros de equipo.</p>
+            </div>
+
+            <div class="trivia-box">
+              <div class="trivia-progress">
+                <span id="triviaQuestionNum">Pregunta 1 de 3</span>
+                <span>⏱️ Pausa de 45 segundos</span>
+              </div>
+              <h2 class="trivia-question" id="triviaQuestionText">Cargando pregunta...</h2>
+              <div class="trivia-options" id="triviaOptionsList"></div>
+              
+              <div class="icebreaker-bubble" id="triviaFactBox" hidden></div>
+            </div>
+
+            <div class="actions-row">
+              <button type="button" class="btn alt" data-go="mapa">Volver a la sala</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================================
+             PANTALLA 5: MOMENTO POST-PARTIDA ("LA CAFETERÍA")
+             ======================================================== -->
+        <section class="screen-view" id="screen-fin" aria-labelledby="heading-fin">
+          <div class="postgame-veil">
+            <div class="postgame-card">
+              <h1 id="heading-fin">¡Buena pausa compartida!</h1>
+              <p style="color:var(--soft);margin-top:6px;font-size:15px">
+                Desconectaste la mente y compartiste con tus compañeros.
+              </p>
+
+              <!-- Avatares de la partida -->
+              <div class="avatar-group" id="postgameAvatars" style="justify-content:center;margin:var(--s4) 0 var(--s2)"></div>
+
+              <!-- Pregunta Rompehielos Aleatoria -->
+              <div class="icebreaker-bubble" id="icebreakerQuestion">
+                ☕ Pregunta para charlar: «¿Qué fue lo más divertido del dibujo?»
+              </div>
+              <button type="button" class="btn ghost sm" data-act="random-icebreaker" style="margin-bottom:var(--s3)">
+                🔄 Generar otra pregunta rompehielos
+              </button>
+
+              <h3 style="margin-top:var(--s3)">¿Se quedan 2 minutos más a charlar?</h3>
+              
+              <!-- Las 3 Acciones con Jerarquía Clara -->
+              <div class="actions-row center" style="margin-top:var(--s3)">
+                <button type="button" class="btn" data-act="random-icebreaker">Seguir charlando</button>
+                <button type="button" class="btn light" data-go="dibujo">Jugar otra vez</button>
+                <button type="button" class="btn alt" data-act="ghost-exit">Salir sin avisar</button>
+              </div>
+
+              <!-- Nota de Autonomía y Cero Culpa -->
+              <div class="exit-freedom-note">
+                <span>🛡️</span>
+                <span>Salir siempre está bien. Nadie recibe notificaciones ni advertencias.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================================
+             PANTALLA 6: TU RINCÓN (PERFIL & PERSONALIZACIÓN)
+             ======================================================== -->
+        <section class="screen-view" id="screen-perfil" aria-labelledby="heading-perfil">
+          <div class="page-col">
+            <div class="screen-header">
+              <h1 id="heading-perfil">Tu Rincón</h1>
+              <p class="subtitle">Personaliza tu avatar, intereses y cómo prefieres participar en los descansos.</p>
+            </div>
+
+            <!-- 1. Avatar y Nombre -->
+            <div class="card profile-section">
+              <h3>Tu Avatar y Nombre</h3>
+              <div class="avatar-customizer">
+                <div class="avatar lg" id="profileAvatarPreview" style="--c:#C98B5B">
+                  <span class="avatar-smile"></span>
+                </div>
+                <div style="flex:1">
+                  <label for="profileNameInput" style="font-weight:700;font-size:13px;display:block;margin-bottom:4px">Tu Nombre o Apodo:</label>
+                  <input type="text" id="profileNameInput" value="Tú" maxlength="18" style="padding:8px 14px;border:2px solid var(--line);border-radius:var(--r-pill);background:var(--bg);width:100%;max-width:240px">
+                </div>
+              </div>
+
+              <div style="margin-top:var(--s3)">
+                <span style="font-size:13px;font-weight:700;color:var(--soft)">Color del avatar:</span>
+                <div class="swatch-group" id="colorSwatches" style="margin-top:6px"></div>
+              </div>
+            </div>
+
+            <!-- 2. Intereses personales -->
+            <div class="card profile-section">
+              <h3>Temas que te gustan (Rompehielos)</h3>
+              <p style="font-size:13px;color:var(--soft);margin-bottom:8px">
+                Se usan para sugerir preguntas post-partida afines a tus gustos.
+              </p>
+              <div class="tags-cloud" id="profileTagsCloud"></div>
+            </div>
+
+            <!-- 3. Modo de interacción preferido -->
+            <div class="card profile-section">
+              <h3>Cómo te gusta interactuar</h3>
+              <div style="margin-top:var(--s2)">
+                <label class="pref-option">
+                  <input type="radio" name="prefModo" value="voz">
+                  <div>
+                    <b>Con voz</b>
+                    <small style="display:block;color:var(--soft)">Charlar por micrófono mientras juegas con el equipo.</small>
+                  </div>
+                </label>
+                <label class="pref-option">
+                  <input type="radio" name="prefModo" value="texto" checked>
+                  <div>
+                    <b>Solo texto</b>
+                    <small style="display:block;color:var(--soft)">Mensajes cortos y reacciones, sin necesidad de encender micrófono.</small>
+                  </div>
+                </label>
+                <label class="pref-option">
+                  <input type="radio" name="prefModo" value="turnos">
+                  <div>
+                    <b>Solo asíncrono</b>
+                    <small style="display:block;color:var(--soft)">Prefiero dejar jugadas a mi propio ritmo y no entrar a salas en vivo.</small>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- 4. Estadísticas Personales -->
+            <div class="card profile-section">
+              <h3>Tus Micro-Pausas Acumuladas</h3>
+              <div class="stats-grid">
+                <div class="stat-box">
+                  <div class="stat-number" id="statBreaks">0</div>
+                  <div class="stat-label">Pausas Tomadas</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-number" id="statDrawings">0</div>
+                  <div class="stat-label">Rondas Ganadas</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-number" id="statWords">0</div>
+                  <div class="stat-label">Palabras Aportadas</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="actions-row">
+              <button type="button" class="btn" data-act="save-profile">Guardar Preferencias</button>
+              <button type="button" class="btn alt" data-go="mapa">Volver a la sala</button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Diálogo Nativo: Compartir Sala -->
+  <dialog id="shareRoomDialog">
+    <div class="modal-card">
+      <h2>🔗 Invitar a un Compañero</h2>
+      <p style="color:var(--soft);margin:var(--s2) 0 var(--s3);font-size:14px">
+        Comparte este enlace para que un compañero de trabajo se una a tu misma sala de descanso.
+      </p>
+      <input type="text" readonly value="https://hinara.github.io/PlayBreak/#dibujo" 
+        style="width:100%;padding:10px 14px;border:2px solid var(--line);border-radius:var(--r-pill);background:var(--bg);text-align:center;font-weight:700;margin-bottom:var(--s3)">
+      <div class="actions-row center">
+        <button type="button" class="btn" data-act="copy-invite-link">Copiar Enlace</button>
+        <button type="button" class="btn alt" onclick="document.getElementById('shareRoomDialog').close()">Cerrar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Canvas de Confeti Dinámico -->
+  <canvas id="confettiCanvas" aria-hidden="true"></canvas>
+
+  <!-- Scripts Modulares -->
+  <script src="js/sound.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

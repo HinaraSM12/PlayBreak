@@ -1,0 +1,16 @@
+# Logs y archivos del sistema
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos de volcado temporal y scripts de scratch
+dump_*.txt
+*.tmp
+
+# Dependencias y entornos
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+env/

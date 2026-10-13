@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PlayBreak</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/* v3 minimalista. Mismo sistema visual que v1 (60-30-10, base 8, Fredoka + Nunito).
+   Cambios guiados por el cuestionario SUS: todo empieza vacío (nada inventado), una acción principal por pantalla,
+   sin salas inactivas, tiempo límite opcional y sin elementos decorativos que no ayuden a la tarea. */
+:root{--bg:#F5EFE3;--panel:#FFFAF1;--ink:#3A2E25;--soft:#6E6052;--line:#E6D9C3;
+--sand:#EBDDC2;--sand-d:#D9C6A3;--floor:#D3E2C7;--wood:#B98B64;
+--accent:#7A4E2D;--accent-d:#5C3820;--on-accent:#FFF8EC;--sun-l:#FBEFD2;--ok:#1E6B45;--bad:#9A2F2F;
+--s1:4px;--s2:8px;--s3:16px;--s4:24px;--s5:32px;--s6:48px;--r1:8px;--r2:16px;--r3:24px;
+--display:Fredoka,Nunito,system-ui,sans-serif;--body:Nunito,system-ui,sans-serif;color-scheme:light}
+*,*:before,*:after{box-sizing:border-box}html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:500 15px/1.5 var(--body)}
+h1,h2,h3{font-family:var(--display);font-weight:600;margin:0;text-wrap:balance}
+h1{font-size:28px;line-height:1.15}h2{font-size:22px}h3{font-size:16px}p{margin:0}
+button,input{font:inherit;color:inherit}button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.app{display:grid;grid-template-columns:176px 1fr;height:100%}
+nav{background:var(--panel);border-right:2px solid var(--line);padding:var(--s4) var(--s3);display:flex;flex-direction:column;gap:var(--s2)}
+.logo{font:600 24px var(--display);padding:0 var(--s2) var(--s3)}
+.nb{border:0;background:none;text-align:left;padding:var(--s2) var(--s3);border-radius:var(--r2);font-weight:700}
+.nb:hover{background:var(--sand)}.nb.on{background:var(--accent);color:var(--on-accent)}
+.me{margin-top:auto;font-size:13px;color:var(--soft);padding:var(--s2)}
+main{display:flex;flex-direction:column;min-width:0;height:100%}
+.proto{display:flex;gap:var(--s2);align-items:center;padding:var(--s2) var(--s4);font-size:13px;color:var(--soft);border-bottom:2px solid var(--line);overflow-x:auto;white-space:nowrap;flex:none}
+.proto .lbl{font-weight:800;letter-spacing:.03em;text-transform:uppercase;font-size:11px}
+.proto button{border:2px solid var(--line);background:var(--panel);border-radius:99px;padding:0 var(--s3);min-height:28px;font-size:13px;flex:none}
+.proto button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.proto .tools{margin-left:auto;display:flex;gap:var(--s2)}.proto .tools button{border-style:dashed}
+.showbar{position:fixed;left:var(--s3);bottom:var(--s3);z-index:40;border:2px dashed var(--line);background:var(--panel);border-radius:99px;padding:var(--s1) var(--s3);font-size:13px;color:var(--soft)}
+.screen{display:none;flex:1;overflow:auto;padding:var(--s4) var(--s5)}.screen.on{display:block}
+body.bare .app{grid-template-columns:1fr}body.bare nav{display:none}
+.col{max-width:640px;margin:0 auto}
+.hd{margin-bottom:var(--s4)}.hd p{margin-top:var(--s1);color:var(--soft)}
+.soft{color:var(--soft);font-size:13px}
+/* acciones: primaria café · secundaria arena · terciaria contorno */
+.btn{border:0;border-radius:99px;padding:var(--s2) var(--s4);min-height:40px;font-weight:700;background:var(--accent);color:var(--on-accent);box-shadow:0 3px 0 var(--accent-d)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--accent-d)}
+.btn.light{background:var(--sand);color:var(--ink);box-shadow:0 3px 0 var(--sand-d)}
+.btn.alt{background:var(--panel);color:var(--ink);box-shadow:none;border:2px solid var(--line)}
+.btn.sm{padding:var(--s1) var(--s3);min-height:32px;font-size:14px}
+.opts{display:flex;gap:var(--s2);flex-wrap:wrap;margin-top:var(--s3)}.opts.c{justify-content:center}
+.chip{display:inline-flex;border-radius:99px;padding:var(--s1) var(--s3);font-size:13px;font-weight:700;background:var(--sand)}
+/* avatares */
+.av{width:34px;height:34px;border-radius:50% 50% 45% 45%;background:var(--c);border:3px solid #fff;position:relative;flex:none;box-shadow:0 2px 0 rgba(0,0,0,.15)}
+.av:before,.av:after{content:"";position:absolute;top:12px;width:4px;height:5px;border-radius:50%;background:#3A2E25}
+.av:before{left:7px}.av:after{right:7px}
+.av.lg{width:64px;height:64px}.av.lg:before,.av.lg:after{top:24px;width:7px;height:9px}.av.lg:before{left:14px}.av.lg:after{right:14px}
+.av b{position:absolute;left:50%;transform:translateX(-50%);bottom:-22px;font:700 11px var(--body);background:var(--panel);border-radius:var(--r1);padding:0 var(--s1);white-space:nowrap}
+.people{display:flex;gap:var(--s4);padding-bottom:var(--s4);flex-wrap:wrap}
+/* sala */
+.rooms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3)}
+.room{border:0;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:var(--r3);padding:var(--s4);display:flex;flex-direction:column;gap:var(--s1);box-shadow:0 4px 0 var(--line)}
+.room:hover{border-color:var(--accent)}
+.room .ic{font-size:32px;line-height:1}.room small{color:var(--soft);font-weight:700}
+/* partida */
+.card{background:var(--panel);border:2px solid var(--line);border-radius:var(--r3);padding:var(--s3)}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:var(--s2);flex-wrap:wrap;margin-bottom:var(--s2)}
+.chip.timer{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;min-width:72px;justify-content:center}.chip.timer.low{background:#F7DCDC;color:var(--bad)}
+canvas{display:block;width:100%;max-width:560px;height:auto;margin:0 auto;background:#fff;border:4px solid var(--wood);border-radius:var(--r2);touch-action:none;cursor:crosshair}
+.tools2{display:flex;justify-content:space-between;align-items:center;gap:var(--s3);flex-wrap:wrap;margin-top:var(--s3)}
+.cols{display:flex;gap:var(--s2)}.cols button{width:32px;height:32px;border-radius:50%;border:3px solid #fff;background:var(--c);box-shadow:0 0 0 2px var(--line)}
+.cols button[aria-pressed=true]{box-shadow:0 0 0 3px var(--accent)}
+.row-in{display:flex;gap:var(--s2);margin-top:var(--s3);flex-wrap:wrap}
+.row-in input{flex:1 1 200px;min-width:0;border:2px solid var(--line);border-radius:99px;padding:var(--s2) var(--s3);min-height:40px;background:var(--bg)}
+.msg{margin-top:var(--s2);min-height:24px;font-weight:700}.msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}
+.plist{margin-top:var(--s4)}.plist .tags{margin-top:var(--s2)}
+/* palabras */
+.turn{display:flex;gap:var(--s3);align-items:center;padding:var(--s2);border-radius:var(--r2);background:var(--bg);margin-bottom:var(--s2)}
+.turn .w{min-width:96px;height:48px;padding:0 var(--s2);border-radius:var(--r1);background:#fff;border:3px solid var(--wood);display:grid;place-items:center;font:600 18px var(--display)}
+.turn small{color:var(--soft)}.turn.new{outline:3px solid var(--accent);outline-offset:-3px}
+.empty{border:3px dashed var(--sand-d);border-radius:var(--r3);padding:var(--s4);text-align:center;color:var(--soft)}
+/* fin */
+.veil{min-height:100%;display:grid;place-items:center}
+.pop{background:var(--panel);border:2px solid var(--line);border-radius:var(--r3);padding:var(--s5);max-width:480px;width:100%;text-align:center;box-shadow:0 8px 0 var(--line)}
+.pop .people{justify-content:center;margin:var(--s4) 0 var(--s2)}
+.ice{background:var(--sun-l);border-radius:var(--r2);padding:var(--s3);margin-top:var(--s3);font:600 18px/1.3 var(--display)}
+/* perfil */
+.tags{display:flex;gap:var(--s2);flex-wrap:wrap}
+.tag{border:2px solid var(--line);background:var(--bg);border-radius:99px;padding:var(--s1) var(--s3);font-weight:700}
+.tag[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.sec{margin-bottom:var(--s3)}.sec h3{margin-bottom:var(--s2)}
+.opt{display:flex;gap:var(--s3);align-items:flex-start;padding:var(--s3);border:2px solid var(--line);border-radius:var(--r2);margin-bottom:var(--s2);cursor:pointer}
+.opt:has(input:checked){border-color:var(--accent);background:var(--sand)}.opt input{margin-top:var(--s1);accent-color:var(--accent)}
+.opt small{display:block;color:var(--soft)}
+.sw-c{display:flex;gap:var(--s2);margin-top:var(--s2)}
+.sw-c button{width:32px;height:32px;border-radius:50%;border:3px solid #fff;background:var(--c);box-shadow:0 0 0 2px var(--line)}
+.sw-c button[aria-pressed=true]{box-shadow:0 0 0 3px var(--accent)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--s4);background:var(--ink);color:var(--bg);padding:var(--s2) var(--s3);border-radius:var(--r2);font-weight:700;max-width:calc(100% - 32px);z-index:50}
+@media (max-width:760px){
+ .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}body.bare .app{grid-template-rows:1fr}
+ nav{flex-direction:row;align-items:center;border-right:0;border-bottom:2px solid var(--line);padding:var(--s2) var(--s3);overflow-x:auto}
+ .logo{padding:0 var(--s2) 0 0;font-size:20px}.me{display:none}.nb{padding:var(--s2);white-space:nowrap}
+ .screen{padding:var(--s3)}h1{font-size:24px}.rooms{grid-template-columns:1fr}.pop{padding:var(--s4) var(--s3)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+<nav aria-label="Principal">
+ <div class="logo">PlayBreak</div>
+ <button class="nb" data-go="mapa">Sala</button>
+ <button class="nb" data-go="turnos">Mis turnos</button>
+ <button class="nb" data-go="perfil">Tu rincón</button>
+ <div class="me">Aquí nada es obligatorio.</div>
+</nav>
+<main>
+ <div class="proto" id="proto"><span class="lbl">Pantallas del prototipo</span></div>
+
+ <!-- 1 · Sala -->
+ <section class="screen" id="mapa"><div class="col">
+  <div class="hd"><h1>La sala de descanso</h1><p>Por ahora estás tú. Elige un juego y empieza cuando quieras.</p></div>
+  <div class="rooms">
+   <button class="room" data-go="dibujo"><span class="ic">🎨</span><h3>Mesa de dibujo</h3><small>En vivo · dibuja y que adivinen</small></button>
+   <button class="room" data-go="turnos"><span class="ic">🔤</span><h3>Rincón de palabras</h3><small>Por turnos · juega cuando puedas</small></button>
+  </div>
+  <p class="soft" style="margin-top:24px">Pronto habrá más juegos.</p>
+ </div></section>
+
+ <!-- 2 · Partida en curso (empieza de cero) -->
+ <section class="screen" id="dibujo"><div class="col">
+  <div class="hd"><h1>Mesa de dibujo</h1><p id="d-sub">Dibuja y deja que otros adivinen. El tiempo empieza cuando trazas.</p></div>
+  <div class="card">
+   <div class="bar"><span class="chip" id="d-topic"></span><span class="chip timer" id="d-timer" role="timer">1:00</span></div>
+   <canvas id="d-canvas" width="560" height="300" aria-label="Lienzo para dibujar"></canvas>
+   <div class="tools2"><div class="cols" id="d-cols"></div><div class="opts" style="margin:0"><button class="btn alt sm" data-act="tema">Cambiar tema</button><button class="btn alt sm" data-act="limite" id="d-limit">Tiempo: 60 s</button><button class="btn alt sm" data-act="borrar">Borrar</button></div></div>
+   <p class="msg ok" id="d-msg" aria-live="polite"></p>
+  </div>
+  <div class="plist"><h3>Quién juega</h3><div class="tags" id="d-people"></div>
+   <form class="row-in" id="d-add"><input id="d-name" aria-label="Nombre de quien juega contigo" placeholder="Agregar a alguien (opcional)" maxlength="16" autocomplete="off"><button class="btn light">Agregar</button></form></div>
+  <div class="opts"><button class="btn" data-act="terminar">Terminé</button><button class="btn alt" data-go="mapa">Volver a la sala</button></div>
+ </div></section>
+
+ <!-- 3 · Turno asíncrono (empieza vacío) -->
+ <section class="screen" id="turnos"><div class="col">
+  <div class="hd"><h1>Rincón de palabras</h1><p>Cada palabra empieza con la última letra de la anterior. Juega cuando quieras.</p></div>
+  <div id="w-chain"><div class="empty" id="w-empty">Aún no hay palabras. Escribe la primera y la cadena queda esperando al siguiente.</div></div>
+  <form class="row-in" id="w-form"><input id="w-word" aria-label="Tu palabra" placeholder="Escribe una palabra" autocomplete="off"><button class="btn">Dejar mi jugada</button></form>
+  <p class="msg bad" id="w-msg" aria-live="polite"></p>
+  <div class="opts" id="w-done" hidden><button class="btn" data-go="mapa">Volver a la sala</button></div>
+ </div></section>
+
+ <!-- 4 · Momento post partida -->
+ <section class="screen" id="fin"><div class="veil"><div class="pop">
+  <h1>¡Buena partida!</h1><p class="soft" style="font-size:15px;margin-top:var(--s1)" id="f-sub"></p>
+  <div class="people" id="f-row"></div>
+  <div class="ice" id="f-ice" hidden></div>
+  <h2 style="margin-top:24px">¿Se quedan 2 minutos más?</h2>
+  <div class="opts c"><button class="btn" data-act="charlar">Seguir charlando</button><button class="btn light" data-go="dibujo">Jugar otra vez</button><button class="btn alt" data-go="mapa">Salir sin avisar</button></div>
+  <p class="soft" style="margin-top:16px">Salir siempre está bien. Nadie recibe un aviso.</p>
+ </div></div></section>
+
+ <!-- 5 · Perfil -->
+ <section class="screen" id="perfil"><div class="col">
+  <div class="hd"><h1>Tu rincón</h1><p>Pistas para que las salas se sientan tuyas. Cámbialas cuando quieras.</p></div>
+  <div class="sec card"><h3>Tu avatar</h3><div class="people" style="padding:var(--s3) 0 0"><div class="av lg" id="pav" style="--c:#C98B5B"></div></div><div class="sw-c" id="cols"></div></div>
+  <div class="sec card"><h3>Lo que te gusta</h3><div class="tags" data-tags="Cine,Series,Videojuegos,Música,Senderismo,Cocina,Lectura,Fútbol"></div></div>
+  <div class="sec card"><h3>Cómo te gusta jugar</h3>
+   <label class="opt" for="m1"><input type="radio" id="m1" name="modo"><span><b>Con voz</b><small>Charlar en voz alta mientras juegas.</small></span></label>
+   <label class="opt" for="m2"><input type="radio" id="m2" name="modo" checked><span><b>Solo texto</b><small>Mensajes cortos, sin micrófono.</small></span></label>
+   <label class="opt" for="m3"><input type="radio" id="m3" name="modo"><span><b>Solo por turnos</b><small>Dejas jugadas y nunca te meten en una sala en vivo.</small></span></label>
+  </div>
+  <button class="btn" data-act="guardar-perfil">Guardar</button>
+ </div></section>
+</main></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const SCREENS=[["mapa","1 Sala"],["dibujo","2 Partida en curso"],["turnos","3 Turno asíncrono"],["fin","4 Post partida"],["perfil","5 Tu rincón"]];
+const NAV={mapa:"mapa",dibujo:"mapa",fin:"mapa",turnos:"turnos",perfil:"perfil"};
+let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3000)}
+
+$("#proto").insertAdjacentHTML("beforeend",SCREENS.map(([k,l])=>`<button data-go="${k}" data-p="1">${l}</button>`).join("")+`<div class="tools"><button data-act="ocultar">Ocultar barra</button><button data-act="reiniciar">↺ Reiniciar</button></div>`);
+document.body.insertAdjacentHTML("beforeend",`<button class="showbar" id="showbar" data-act="mostrar" hidden>Mostrar pantallas</button>`);
+
+function go(k){if(!SCREENS.some(s=>s[0]===k))k="mapa";
+ clearInterval(D.t);
+ $$(".screen").forEach(e=>e.classList.toggle("on",e.id===k));
+ $$("[data-p]").forEach(b=>b.classList.toggle("on",b.dataset.go===k));
+ $$(".nb").forEach(b=>b.classList.toggle("on",b.dataset.go===NAV[k]));
+ $("#"+k).scrollTop=0;
+ if(k==="dibujo")resetDibujo();
+ if(k==="fin")renderFin();
+ try{history.replaceState(null,"","#"+k)}catch(e){}}
+document.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(g){go(g.dataset.go);return}
+ const a=e.target.closest("[data-act]");if(a)act(a.dataset.act,a)});
+
+/* perfil */
+$$("[data-tags]").forEach(el=>el.innerHTML=el.dataset.tags.split(",").map(t=>`<button class="tag" data-act="toggle" aria-pressed="false">${t}</button>`).join(""));
+$("#cols").innerHTML=["#C98B5B","#F28B82","#8CC6E8","#7CC4A4","#F6C85F","#B79CE0"].map((c,i)=>`<button style="--c:${c}" data-act="color" data-c="${c}" aria-label="Color ${i+1}" aria-pressed="${i===0}"></button>`).join("");
+
+/* 2 · Mesa de dibujo: solo estás tú; el tiempo y el tema son opcionales */
+const TEMAS=["sol","casa","gato","pizza","bicicleta","árbol","guitarra","luna","café","montaña","Dibujo libre"],INK=["#3A2E25","#7A4E2D","#EE8E8E","#F6C85F","#7CC4A4","#8CC6E8"],LIMITES=[60,30,0];
+const D={players:[],ti:0,li:0,left:60,running:false,over:false,t:null,drawing:false,color:INK[0]};
+const cv=$("#d-canvas"),cx=cv.getContext("2d");
+const fmt=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+function paintTimer(){const e=$("#d-timer"),lim=LIMITES[D.li];e.textContent=lim?fmt(Math.max(D.left,0)):"Sin límite";e.classList.toggle("low",!!lim&&D.running&&D.left<=10);
+ $("#d-limit").textContent="Tiempo: "+(lim?lim+" s":"sin límite")}
+function paintPeople(){$("#d-people").innerHTML=`<span class="tag" aria-pressed="true">Tú</span>`+D.players.map((n,i)=>`<button class="tag" data-act="quitar" data-i="${i}" aria-label="Quitar a ${esc(n)}">${esc(n)} ✕</button>`).join("")}
+function resetDibujo(){clearInterval(D.t);D.running=D.over=false;D.left=LIMITES[D.li];
+ cx.fillStyle="#fff";cx.fillRect(0,0,cv.width,cv.height);cx.lineWidth=5;cx.lineCap=cx.lineJoin="round";
+ $("#d-topic").textContent=TEMAS[D.ti]==="Dibujo libre"?"Dibujo libre":"Tema: "+TEMAS[D.ti];
+ $("#d-msg").textContent="";$("#d-cols").innerHTML=INK.map((c,i)=>`<button style="--c:${c}" data-act="pincel" data-c="${c}" aria-label="Color ${i+1}" aria-pressed="${c===D.color}"></button>`).join("");
+ paintTimer();paintPeople()}
+function startTimer(){const lim=LIMITES[D.li];if(!lim||D.running)return;D.running=true;
+ D.t=setInterval(()=>{D.left--;paintTimer();if(D.left<=0){D.over=true;D.running=false;clearInterval(D.t);$("#d-msg").textContent="Se acabó el tiempo. Toca «Terminé» cuando quieras."}},1000)}
+const pt=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]};
+cv.addEventListener("pointerdown",e=>{if(D.over)return;startTimer();D.drawing=true;cv.setPointerCapture(e.pointerId);const[x,y]=pt(e);cx.strokeStyle=D.color;cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+.1,y);cx.stroke()});
+cv.addEventListener("pointermove",e=>{if(!D.drawing)return;const[x,y]=pt(e);cx.lineTo(x,y);cx.stroke()});
+["pointerup","pointercancel"].forEach(n=>cv.addEventListener(n,()=>D.drawing=false));
+$("#d-add").onsubmit=e=>{e.preventDefault();const i=$("#d-name"),n=i.value.trim();if(!n)return;
+ if(n.toLowerCase()==="tú"||D.players.some(p=>p.toLowerCase()===n.toLowerCase())||D.players.length>=4){toast(D.players.length>=4?"Pueden jugar hasta 5 personas.":"Ese nombre ya está.");return}
+ D.players.push(n);i.value="";paintPeople()};
+
+/* 4 · Post partida: usa solo lo que pasó */
+function renderFin(){const names=["Tú",...D.players],t=TEMAS[D.ti];
+ $("#f-sub").textContent=(t==="Dibujo libre"?"Hicieron un dibujo libre":`Dibujaron «${t}»`)+(D.players.length?` entre ${names.length}.`:". Cuando quieras, invita a alguien.");
+ $("#f-row").innerHTML=names.map((n,i)=>`<div class="av lg" style="--c:${i?["#B79CE0","#7CC4A4","#F6C85F","#8CC6E8"][(i-1)%4]:$("#pav").style.getPropertyValue("--c")||"#C98B5B"}"><b>${esc(n)}</b></div>`).join("");
+ $("#f-ice").hidden=true}
+
+/* 3 · Turno asíncrono: empieza vacío; la cadena la arma quien juega */
+const chain=[];
+$("#w-form").onsubmit=e=>{e.preventDefault();const w=$("#w-word").value.trim().toLowerCase().replace(/[<>&"]/g,""),m=$("#w-msg");
+ if(!w){m.textContent="Escribe una palabra para dejar tu jugada.";return}
+ if(chain.length){const l=chain[chain.length-1].slice(-1);if(w[0]!==l){m.textContent=`Tiene que empezar con «${l}».`;return}}
+ m.textContent="";chain.push(w);$("#w-empty")&&$("#w-empty").remove();
+ $("#w-chain").insertAdjacentHTML("beforeend",`<div class="turn new"><div class="w">${esc(w)}</div><div><p><b>Tú</b> dejaste «${esc(w)}»</p><small>Ahora · el siguiente la verá cuando entre</small></div></div>`);
+ $("#w-form").hidden=true;$("#w-done").hidden=false};
+
+function act(k,b){switch(k){
+ case "toggle":b.setAttribute("aria-pressed",b.getAttribute("aria-pressed")!=="true");break;
+ case "tema":D.ti=(D.ti+1)%TEMAS.length;resetDibujo();break;
+ case "limite":D.li=(D.li+1)%LIMITES.length;resetDibujo();break;
+ case "borrar":if(!D.over){cx.fillStyle="#fff";cx.fillRect(0,0,cv.width,cv.height)}break;
+ case "pincel":D.color=b.dataset.c;$$("#d-cols button").forEach(x=>x.setAttribute("aria-pressed",x===b));break;
+ case "quitar":D.players.splice(+b.dataset.i,1);paintPeople();break;
+ case "terminar":go("fin");break;
+ case "charlar":{const q=["¿Qué fue lo más difícil de dibujar?","¿Qué dibujarías si tuvieras más tiempo?","¿Cuál fue el dibujo más raro que viste?"],e=$("#f-ice");e.textContent=q[Math.floor(Math.random()*q.length)];e.hidden=false;break}
+ case "color":$("#pav").style.setProperty("--c",b.dataset.c);$$("#cols button").forEach(x=>x.setAttribute("aria-pressed",x===b));break;
+ case "guardar-perfil":toast("Cambios guardados.");break;
+ case "ocultar":$("#proto").hidden=true;$("#showbar").hidden=false;break;
+ case "mostrar":$("#proto").hidden=false;$("#showbar").hidden=true;break;
+ case "reiniciar":location.hash="mapa";location.reload();break;
+}}
+let h0=(location.hash||"").slice(1);if(h0.endsWith("-captura")){h0=h0.slice(0,-8);$("#proto").hidden=true}
+go(h0||"mapa");
+</script>
+</body>
+</html>
