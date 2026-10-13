@@ -256,6 +256,16 @@
                     <div class="avatar-status-pill">En descanso</div>
                   </div>
 
+                  <!-- Avatar del Compañero Conectado en Tiempo Real (P2P o Compañero Destacado) -->
+                  <div class="room-user-avatar peer-avatar" id="roomPeerAvatar" style="left:38%;top:48%;--c:#B79CE0" hidden>
+                    <div class="avatar-shadow"></div>
+                    <div class="avatar-body">
+                      <span class="avatar-smile"></span>
+                    </div>
+                    <div class="avatar-nametag" id="roomPeerAvatarName">Compañero</div>
+                    <div class="avatar-status-pill" id="roomPeerAvatarStatus">En descanso</div>
+                  </div>
+
                   <!-- Onda expansiva táctil de destino al hacer clic -->
                   <div class="room-click-ripple" id="roomClickRipple" hidden></div>
 
@@ -364,12 +374,18 @@
               <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
                 <h1 id="heading-dibujo">Mesa de Dibujo</h1>
                 <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <button type="button" class="btn alt sm" data-act="toggle-draw-role" id="toggleDrawRoleBtn">🎨 Rol: Dibujante</button>
                   <button type="button" class="btn alt sm" data-act="toggle-draw-mode" id="toggleDrawModeBtn">Modo: Adivinar</button>
                   <button type="button" class="btn alt sm" data-act="toggle-timer-limit" id="toggleTimerBtn">Tiempo: 60 s</button>
-                  <button type="button" class="btn alt sm" data-act="next-word">Cambiar palabra</button>
+                  <button type="button" class="btn alt sm" data-act="next-word" id="btnNextWord">Cambiar palabra</button>
                 </div>
               </div>
               <p class="subtitle" id="drawSubtitle">Traza sobre el lienzo. El tiempo comienza automáticamente cuando dibujas.</p>
+            </div>
+
+            <!-- Banner de Adivinador (cuando otro dibuja y tú adivinas) -->
+            <div class="draw-role-banner" id="drawRoleBanner" style="display:none;background:var(--sky-soft);border:1.5px solid var(--sky);padding:8px 14px;border-radius:var(--r1);margin-bottom:var(--s2);font-size:13px;font-weight:700;color:#244D66">
+              🔍 Estás en modo <b>Adivinador</b>: Tu compañero tiene el pincel y dibuja en el lienzo. ¡Observa los trazos en tiempo real y escribe tus respuestas en el chat de abajo!
             </div>
 
             <!-- Barra de Multijugador Real P2P WebRTC -->
@@ -390,8 +406,8 @@
               <summary>ℹ️ ¿Cómo funciona esta mesa? <span style="font-size:12px;font-weight:normal;color:var(--soft)">Toca para ver instrucciones</span></summary>
               <div class="guide-content">
                 <ol>
-                  <li><b>Dibuja en el lienzo:</b> Al hacer tu primer trazo con el mouse o dedo, el temporizador inicia de forma automática.</li>
-                  <li><b>Adivinanzas en tiempo real:</b> Si activaste los compañeros de prueba (o juegas en una sala online P2P), ellos van escribiendo intentos en el chat mientras dibujas.</li>
+                  <li><b>Turno de Dibujante:</b> Quien dibuja conoce la palabra secreta y usa los pinceles. Los demás solo pueden adivinar.</li>
+                  <li><b>Turno de Adivinador:</b> El lienzo se bloquea para evitar interferencias. Solo debes observar los trazos y escribir en el chat.</li>
                   <li><b>Acierto y celebración:</b> Quien adivina la palabra correcta desata lluvia de confeti y gana 10 puntos en el marcador de la sesión.</li>
                 </ol>
               </div>
@@ -412,7 +428,7 @@
               </div>
 
               <!-- Barra de Herramientas de Dibujo -->
-              <div class="drawing-toolbar">
+              <div class="drawing-toolbar" id="drawingToolbar">
                 <!-- Selector de Color -->
                 <div class="color-palette" role="group" aria-label="Colores de trazo">
                   <button type="button" class="color-btn active" style="--c:#3A2E25" data-draw-color="#3A2E25" aria-label="Café oscuro"></button>
@@ -534,10 +550,13 @@
                 <!-- Se llena con las palabras persistidas -->
               </div>
 
+              <!-- Banner de Turno Bloqueado cuando es turno de un compañero -->
+              <div id="wordTurnNotice" style="display:none;margin-bottom:var(--s2)"></div>
+
               <!-- Formulario de Ingreso de Palabra -->
               <form id="wordForm" class="form-row">
                 <input type="text" id="wordInput" placeholder="Escribe tu palabra..." autocomplete="off">
-                <button type="submit" class="btn">Dejar mi jugada</button>
+                <button type="submit" class="btn" id="wordSubmitBtn">Dejar mi jugada</button>
               </form>
               <div class="feedback-msg" id="wordFeedbackMsg" role="status" aria-live="polite"></div>
             </div>

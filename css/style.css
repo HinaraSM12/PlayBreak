@@ -2507,3 +2507,24 @@ dialog::backdrop {
     height: 120px;
   }
 }
+
+/* Avatar de Compañero Remoto en Sala y Lienzo Read-Only */
+.room-user-avatar.peer-avatar {
+  z-index: 18;
+}
+
+.room-user-avatar.peer-avatar .avatar-nametag {
+  background: #3B7291;
+}
+
+.room-user-avatar.peer-avatar .avatar-status-pill {
+  color: var(--ok);
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+#drawCanvas.read-only {
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+  filter: contrast(0.97);
+}

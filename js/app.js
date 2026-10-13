@@ -34,7 +34,15 @@
       avatarX: 50,
       avatarY: 50,
       isWalking: false,
-      selectedStation: null
+      selectedStation: null,
+      peer: {
+        connected: false,
+        name: 'Compañero',
+        color: '#B79CE0',
+        x: 38,
+        y: 48,
+        station: null
+      }
     },
 
     // Modo Compañeros Virtuales
@@ -48,6 +56,7 @@
     // Estado de la Mesa de Dibujo
     draw: {
       mode: 'guess', // 'guess' | 'free'
+      role: 'drawer', // 'drawer' | 'guesser'
       topicIndex: 0,
       secretWord: 'GATO',
       hint: 'Mascota peluda de cuatro patas',
@@ -109,18 +118,58 @@
     }
   };
 
-  // Banco de palabras para adivinar con pistas
+  // Banco expandido de 50 palabras para adivinar con pistas temáticas
   const WORD_BANK = [
-    { word: "GATO", hint: "Mascota peluda de cuatro patas" },
-    { word: "PIZZA", hint: "Comida con queso y masa al horno" },
-    { word: "BICICLETA", hint: "Vehículo ecológico de dos ruedas" },
-    { word: "GUITARRA", hint: "Instrumento musical con cuerdas" },
-    { word: "MONTAÑA", hint: "Elevación natural del terreno" },
-    { word: "RELOJ", hint: "Mide las horas y minutos" },
-    { word: "CAFÉ", hint: "Bebida caliente matutina por excelencia" },
-    { word: "ÁRBOL", hint: "Tiene ramas, hojas y raíces" },
-    { word: "LUNA", hint: "Astro que ilumina la noche" },
-    { word: "AVIÓN", hint: "Vuela por los cielos con pasajeros" }
+    { word: "GATO", hint: "Mascota peluda que ronronea y caza ratones" },
+    { word: "PIZZA", hint: "Comida italiana con queso y masa al horno" },
+    { word: "BICICLETA", hint: "Vehículo ecológico de dos ruedas y pedales" },
+    { word: "GUITARRA", hint: "Instrumento musical con cuerdas y caja de madera" },
+    { word: "MONTAÑA", hint: "Gran elevación natural del terreno" },
+    { word: "RELOJ", hint: "Aparato que marca las horas y minutos" },
+    { word: "CAFÉ", hint: "Bebida caliente matutina favorita en la oficina" },
+    { word: "ÁRBOL", hint: "Planta con tronco de madera, ramas y hojas" },
+    { word: "LUNA", hint: "Satélite natural que ilumina el cielo de noche" },
+    { word: "AVIÓN", hint: "Medio de transporte con alas que vuela alto" },
+    { word: "TECLADO", hint: "Periférico con letras y números para escribir en la PC" },
+    { word: "AURICULARES", hint: "Accesorio para escuchar música en privado" },
+    { word: "PERRO", hint: "El mejor amigo del ser humano, ladra y mueve la cola" },
+    { word: "HAMBURGUESA", hint: "Comida con pan, carne, queso y lechuga" },
+    { word: "HELADO", hint: "Postre frío y dulce servido en cono" },
+    { word: "COHETE", hint: "Vehículo espacial propulsado que viaja a las estrellas" },
+    { word: "PLAYA", hint: "Lugar con arena dorada, mar, sol y olas" },
+    { word: "CACTUS", hint: "Planta del desierto con espinas que almacena agua" },
+    { word: "TAZA", hint: "Recipiente con asa para tomar té o café caliente" },
+    { word: "PINGÜINO", hint: "Ave marina vestida de esmoquin que no vuela" },
+    { word: "SOMBRILLA", hint: "Objeto que nos protege del sol o de la lluvia" },
+    { word: "LÁMPARA", hint: "Artefacto que da luz en el escritorio de noche" },
+    { word: "MOCHILA", hint: "Bolso con correas que se lleva en la espalda" },
+    { word: "ROBOT", hint: "Máquina programable de metal con circuitos" },
+    { word: "VOLCÁN", hint: "Montaña que expulsa lava y ceniza caliente" },
+    { word: "FUEGO", hint: "Llama que calienta, ilumina y cocina" },
+    { word: "ESTRELLA", hint: "Cuerpo celeste brillante con cinco puntas en dibujos" },
+    { word: "CORAZÓN", hint: "Órgano que late y símbolo universal de afecto" },
+    { word: "DELFÍN", hint: "Mamífero acuático muy inteligente y amigable" },
+    { word: "DONA", hint: "Pan dulce circular con un agujero en el centro" },
+    { word: "CHOCOLATE", hint: "Golosina dulce elaborada a base de cacao" },
+    { word: "CASTILLO", hint: "Fortaleza medieval con murallas y torres altas" },
+    { word: "PUERTA", hint: "Abertura con pomo para entrar o salir de una sala" },
+    { word: "SILLA", hint: "Mueble ergonómico de oficina para sentarse a trabajar" },
+    { word: "CÁMARA", hint: "Dispositivo que captura fotos y videollamadas" },
+    { word: "TELÉFONO", hint: "Aparato móvil con pantalla táctil para comunicarse" },
+    { word: "LIBRO", hint: "Conjunto de páginas encuadernadas para leer" },
+    { word: "PINCEL", hint: "Herramienta con cerdas para aplicar pintura" },
+    { word: "MANZANA", hint: "Fruta crujiente, roja o verde, muy saludable" },
+    { word: "GAFAS", hint: "Lentes para mejorar la vista o protegerse del sol" },
+    { word: "FANTASMA", hint: "Aparición blanca de sábana que dice ¡buu!" },
+    { word: "BARCO", hint: "Embarcación flotante que navega sobre el agua" },
+    { word: "ISLA", hint: "Porción de tierra rodeada de agua con palmeras" },
+    { word: "MICRÓFONO", hint: "Dispositivo para hablar en reuniones virtuales" },
+    { word: "SOL", hint: "Estrella gigante que da luz y calor a la Tierra" },
+    { word: "CASA", hint: "Hogar acogedor con techo, paredes y ventanas" },
+    { word: "SUBMARINO", hint: "Nave acuática que navega por las profundidades" },
+    { word: "TREN", hint: "Transporte con vagones que viaja sobre rieles" },
+    { word: "FLOR", hint: "Parte colorida de las plantas con pétalos y perfume" },
+    { word: "NUBE", hint: "Masa blanca de vapor flotando en el cielo azul" }
   ];
 
   // Banco de 18 preguntas gamificadas para Trivia Relámpago
@@ -482,6 +531,10 @@
     State.room.avatarX = clampedX;
     State.room.avatarY = clampedY;
 
+    if (State.p2p.connection && State.p2p.connected) {
+      sendPeerMessage({ type: 'peer_walk', x: clampedX, y: clampedY });
+    }
+
     clearTimeout(avatar._walkTimer);
     avatar._walkTimer = setTimeout(() => {
       avatar.classList.remove('walking');
@@ -518,6 +571,9 @@
     if (!station) return;
 
     State.room.selectedStation = stationKey;
+    if (State.p2p.connection && State.p2p.connected) {
+      sendPeerMessage({ type: 'peer_station', stationKey, stationTitle: station.title });
+    }
     walkAvatarTo(station.targetX, station.targetY, () => {
       openStationModal(stationKey);
     });
@@ -621,17 +677,32 @@
   function updateRoomPresence() {
     const colleaguesLayer = $('#roomColleaguesLayer');
     const onlineCountEl = $('#roomOnlineCount');
+    const peerAvatar = $('#roomPeerAvatar');
+    const peerNameEl = $('#roomPeerAvatarName');
+    const peerStatusEl = $('#roomPeerAvatarStatus');
 
+    // Los compañeros en la sala siempre visibles para mantener ambiente vivo
     if (colleaguesLayer) {
-      colleaguesLayer.hidden = !State.simulatedCompanionsEnabled;
+      colleaguesLayer.hidden = false;
     }
 
-    if (onlineCountEl) {
-      onlineCountEl.textContent = State.simulatedCompanionsEnabled ? '4' : '1 (Tú)';
+    if (State.room.peer.connected) {
+      if (peerAvatar) {
+        peerAvatar.hidden = false;
+        peerAvatar.style.setProperty('--c', State.room.peer.color);
+        peerAvatar.style.left = `${State.room.peer.x}%`;
+        peerAvatar.style.top = `${State.room.peer.y}%`;
+      }
+      if (peerNameEl) peerNameEl.textContent = State.room.peer.name;
+      if (peerStatusEl) peerStatusEl.textContent = State.room.peer.station ? `En ${State.room.peer.station}` : 'En descanso';
+      if (onlineCountEl) onlineCountEl.textContent = `🟢 En vivo con ${State.room.peer.name}`;
+    } else {
+      if (peerAvatar) peerAvatar.hidden = true;
+      if (onlineCountEl) onlineCountEl.textContent = State.simulatedCompanionsEnabled ? '4 compañeros en la sala' : '1 (Tú)';
     }
 
     $$('.booth-avatars').forEach(box => {
-      box.style.display = State.simulatedCompanionsEnabled ? 'flex' : 'none';
+      box.style.display = 'flex';
     });
   }
 
@@ -713,7 +784,7 @@
   }
 
   function handlePointerDown(e) {
-    if (State.draw.gameOver) return;
+    if (State.draw.gameOver || State.draw.role !== 'drawer') return;
     canvas.setPointerCapture(e.pointerId);
     State.draw.drawing = true;
     
@@ -932,8 +1003,65 @@
     updateTimerDisplay();
 
     $('#drawStatusMsg').textContent = '';
+    updateDrawRoleUI();
     renderDrawingPlayers();
     renderScoreboard();
+  }
+
+  function toggleDrawRole() {
+    State.draw.role = State.draw.role === 'drawer' ? 'guesser' : 'drawer';
+    updateDrawRoleUI();
+    if (State.p2p.connection) {
+      sendPeerMessage({
+        type: 'draw_role',
+        role: State.draw.role === 'drawer' ? 'guesser' : 'drawer',
+        word: State.draw.secretWord,
+        hint: State.draw.hint
+      });
+    }
+    window.sounds && window.sounds.playClick();
+    toast(State.draw.role === 'drawer' ? '🎨 Ahora eres el Dibujante. ¡Toma el pincel!' : '🔍 Ahora eres Adivinador. ¡Mira el lienzo e intenta adivinar!');
+  }
+
+  function updateDrawRoleUI() {
+    const isDrawer = State.draw.role === 'drawer';
+    const roleBtn = $('#toggleDrawRoleBtn');
+    if (roleBtn) roleBtn.textContent = isDrawer ? '🎨 Rol: Dibujante' : '🔍 Rol: Adivinador';
+
+    const banner = $('#drawRoleBanner');
+    if (banner) banner.style.display = isDrawer ? 'none' : 'block';
+
+    const toolbar = $('#drawingToolbar');
+    if (toolbar) toolbar.style.display = isDrawer ? 'flex' : 'none';
+
+    const nextWordBtn = $('#btnNextWord');
+    if (nextWordBtn) nextWordBtn.style.display = isDrawer ? 'inline-flex' : 'none';
+
+    const canvasEl = $('#drawCanvas');
+    if (canvasEl) canvasEl.classList.toggle('read-only', !isDrawer);
+
+    const topicTag = $('#drawTopicTag');
+    const hintText = $('#drawHintText');
+    const guessInput = $('#guessInput');
+
+    if (State.draw.mode === 'guess') {
+      if (isDrawer) {
+        if (topicTag) topicTag.textContent = `Palabra: ${State.draw.secretWord}`;
+        if (hintText) hintText.textContent = `Pista: ${State.draw.hint}`;
+        if (guessInput) {
+          guessInput.disabled = true;
+          guessInput.placeholder = 'Tú eres el dibujante. Los demás están adivinando...';
+        }
+      } else {
+        const masked = State.draw.secretWord ? State.draw.secretWord.replace(/[A-ZÁÉÍÓÚ]/gi, '_ ') : '_ _ _';
+        if (topicTag) topicTag.textContent = `Adivina: ${State.draw.secretWord.length} letras: ${masked}`;
+        if (hintText) hintText.textContent = `Pista: ${State.draw.hint}`;
+        if (guessInput) {
+          guessInput.disabled = false;
+          guessInput.placeholder = '¿Qué crees que es? Escribe aquí...';
+        }
+      }
+    }
   }
 
   function renderDrawingPlayers() {
@@ -1061,6 +1189,43 @@
     }).join('');
 
     container.scrollTop = container.scrollHeight;
+
+    // Control de turno consecutivo (evitar que el mismo usuario juegue dos veces seguidas)
+    const isMyTurnBlocked = lastWordObj && (lastWordObj.author.toLowerCase() === State.profile.name.toLowerCase());
+    const noticeEl = $('#wordTurnNotice');
+    const submitBtn = $('#wordSubmitBtn');
+    const inputEl = $('#wordInput');
+
+    if (noticeEl) {
+      if (isMyTurnBlocked) {
+        noticeEl.style.display = 'block';
+        noticeEl.innerHTML = `
+          <div style="background:var(--sand-light);border:1.5px dashed var(--wood);border-radius:var(--r1);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <span style="font-size:13px;color:var(--ink)">
+              ⏳ Ya dejaste tu palabra («<b>${escapeHtml(lastWordObj.word.toUpperCase())}</b>»). Espera que otro compañero continúe la cadena antes de volver a jugar.
+            </span>
+            <button type="button" class="btn alt sm" data-act="simulate-word" style="font-size:11.5px;padding:3px 8px">🎬 Simular jugada de compañero</button>
+          </div>
+        `;
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.title = 'Espera el turno de un compañero';
+        }
+        if (inputEl) {
+          inputEl.disabled = true;
+          inputEl.placeholder = `Esperando que otro compañero continúe tras «${lastWordObj.word}»...`;
+        }
+      } else {
+        noticeEl.style.display = 'none';
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.removeAttribute('title');
+        }
+        if (inputEl) {
+          inputEl.disabled = false;
+        }
+      }
+    }
   }
 
   function handleWordSubmit(word) {
@@ -1079,7 +1244,19 @@
       return;
     }
 
-    // --- NUEVA VALIDACIÓN: PREVENCIÓN DE PALABRAS YA USADAS ---
+    // Validación de turno consecutivo: solo se puede aportar tras otro compañero
+    if (State.words.chain.length > 0) {
+      const lastWordObj = State.words.chain[State.words.chain.length - 1];
+      if (lastWordObj.author.toLowerCase() === State.profile.name.toLowerCase()) {
+        msgEl.textContent = `⏳ Ya aportaste la última palabra («${lastWordObj.word}»). Por favor espera el turno de otro compañero antes de volver a jugar.`;
+        msgEl.className = 'feedback-msg error';
+        window.sounds && window.sounds.playClick();
+        toast('Espera el turno de otro compañero para continuar la cadena.');
+        return;
+      }
+    }
+
+    // Prevención estricta de palabras ya usadas en la cadena
     const alreadyUsed = State.words.chain.some(item => {
       const w = item.word.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       return w === clean;
@@ -1834,6 +2011,15 @@
       window.sounds && window.sounds.playSuccess();
       toast('¡Conexión P2P en tiempo real establecida!');
       conn.send({ type: 'hello', name: State.profile.name });
+      conn.send({
+        type: 'peer_hello',
+        name: State.profile.name,
+        color: State.profile.color,
+        x: State.room.avatarX,
+        y: State.room.avatarY
+      });
+      State.room.peer.connected = true;
+      updateRoomPresence();
     });
 
     conn.on('data', (data) => {
@@ -1920,6 +2106,62 @@
           window.sounds && window.sounds.playDing();
           toast(`💬 ${data.reply.author} respondió a una nota en El Pasillo.`);
         }
+        break;
+
+      case 'peer_hello':
+        State.room.peer.connected = true;
+        State.room.peer.name = data.name || 'Compañero';
+        State.room.peer.color = data.color || '#B79CE0';
+        State.room.peer.x = data.x || 38;
+        State.room.peer.y = data.y || 48;
+        updateRoomPresence();
+        sendPeerMessage({
+          type: 'peer_hello_back',
+          name: State.profile.name,
+          color: State.profile.color,
+          x: State.room.avatarX,
+          y: State.room.avatarY
+        });
+        toast(`🟢 ${State.room.peer.name} está presente en la sala.`);
+        break;
+
+      case 'peer_hello_back':
+        State.room.peer.connected = true;
+        State.room.peer.name = data.name || 'Compañero';
+        State.room.peer.color = data.color || '#B79CE0';
+        State.room.peer.x = data.x || 38;
+        State.room.peer.y = data.y || 48;
+        updateRoomPresence();
+        toast(`🟢 ${State.room.peer.name} está presente en la sala.`);
+        break;
+
+      case 'peer_walk':
+        State.room.peer.x = data.x;
+        State.room.peer.y = data.y;
+        const peerAv = $('#roomPeerAvatar');
+        if (peerAv) {
+          peerAv.hidden = false;
+          peerAv.style.left = `${data.x}%`;
+          peerAv.style.top = `${data.y}%`;
+          peerAv.classList.add('walking');
+          setTimeout(() => peerAv.classList.remove('walking'), 650);
+        }
+        break;
+
+      case 'peer_station':
+        State.room.peer.station = data.stationTitle || data.stationKey;
+        const peerStatus = $('#roomPeerAvatarStatus');
+        if (peerStatus) {
+          peerStatus.textContent = data.stationKey ? `En ${data.stationTitle || data.stationKey}` : 'En descanso';
+        }
+        break;
+
+      case 'draw_role':
+        State.draw.role = data.role;
+        if (data.word) State.draw.secretWord = data.word;
+        if (data.hint) State.draw.hint = data.hint;
+        updateDrawRoleUI();
+        toast(State.draw.role === 'drawer' ? '🎨 Tu compañero te pasó el turno de dibujar.' : '🔍 Tu compañero tiene el pincel. ¡Intenta adivinar en el chat!');
         break;
     }
   }
@@ -2229,6 +2471,12 @@
         return;
       }
 
+      const switchViewBtn = e.target.closest('[data-act="switch-view"]');
+      if (switchViewBtn) {
+        setRoomView(switchViewBtn.dataset.view);
+        return;
+      }
+
       const actBtn = e.target.closest('[data-act]');
       if (actBtn) {
         handleAction(actBtn.dataset.act, actBtn);
@@ -2246,13 +2494,6 @@
       const stationCard = e.target.closest('.room-card[data-station]');
       if (stationCard && State.room.view === 'grid') {
         openStationModal(stationCard.dataset.station);
-        return;
-      }
-
-      // Conmutador de vista (Salón vs Cuadrícula)
-      const switchViewBtn = e.target.closest('[data-act="switch-view"]');
-      if (switchViewBtn) {
-        setRoomView(switchViewBtn.dataset.view);
         return;
       }
 
@@ -2428,6 +2669,14 @@
 
       case 'download-canvas':
         downloadCanvasAsPNG();
+        break;
+
+      case 'switch-view':
+        setRoomView(btn.dataset.view);
+        break;
+
+      case 'toggle-draw-role':
+        toggleDrawRole();
         break;
 
       case 'next-word':
