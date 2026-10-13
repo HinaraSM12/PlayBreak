@@ -2437,7 +2437,7 @@
       return `<button type="button" class="tag-btn" data-tag="${t}" aria-pressed="${active}">${escapeHtml(t)}</button>`;
     }).join('');
 
-    $('input[name="prefModo"]').forEach(radio => {
+    $$('input[name="prefModo"]').forEach(radio => {
       radio.checked = radio.value === State.profile.mode;
     });
 
@@ -2547,8 +2547,8 @@
   }
 
   function updateRecommendedRoomBadge() {
-    $('.recommend-badge').forEach(el => el.remove());
-    $('.room-card').forEach(el => el.classList.remove('recommended'));
+    $$('.recommend-badge').forEach(el => el.remove());
+    $$('.room-card').forEach(el => el.classList.remove('recommended'));
 
     const mode = State.profile.mode || 'texto';
     if (mode === 'turnos') {
