@@ -28,6 +28,15 @@
       achievements: JSON.parse(localStorage.getItem('pb_achievements') || '{"picasso": false, "wordsmith": false, "trivia": false, "pasillo": false}')
     },
 
+    // Estado del Salón Espacial y Avatar
+    room: {
+      view: localStorage.getItem('pb_room_view') || 'spatial',
+      avatarX: 50,
+      avatarY: 50,
+      isWalking: false,
+      selectedStation: null
+    },
+
     // Modo Compañeros Virtuales
     simulatedCompanionsEnabled: localStorage.getItem('pb_sim_companions') !== 'false',
     virtualFriends: [
@@ -240,10 +249,30 @@
     "¿Cuál ha sido la anécdota más curiosa que te ha pasado en teletrabajo?"
   ];
 
-  // Notas iniciales para El Pasillo
+  // Notas iniciales para El Pasillo con hilos de conversación
   const INITIAL_PASILLO_NOTES = [
-    { id: 1, author: "Sara", color: "#B79CE0", text: "¡Lofi hip hop beats de fondo siempre! Me ayuda un montón a escribir código.", time: "Hace 10 min", reactions: { "☕": 3, "👏": 1 } },
-    { id: 2, author: "Tomás", color: "#7CC4A4", text: "Sonido de lluvia en bosque con audífonos. Siento que estoy en una cabaña.", time: "Hace 25 min", reactions: { "☕": 2, "🍪": 4 } }
+    {
+      id: 1,
+      author: "Sara",
+      color: "#B79CE0",
+      text: "¡Lofi hip hop beats de fondo siempre! Me ayuda un montón a escribir código.",
+      time: "Hace 10 min",
+      reactions: { "☕": 4, "🍪": 0, "👏": 1 },
+      replies: [
+        { id: 101, author: "Tomás", color: "#7CC4A4", text: "¡Totalmente! Las playlists de ChilledCow son clásicos.", time: "Hace 8 min" }
+      ]
+    },
+    {
+      id: 2,
+      author: "Tomás",
+      color: "#7CC4A4",
+      text: "Sonido de lluvia en bosque con audífonos. Siento que estoy en una cabaña.",
+      time: "Hace 25 min",
+      reactions: { "☕": 2, "🍪": 4, "👏": 0 },
+      replies: [
+        { id: 102, author: "Sara", color: "#B79CE0", text: "¡Qué rico ambiente! Con una taza de té caliente queda perfecto ☕", time: "Hace 18 min" }
+      ]
+    }
   ];
 
   // ==========================================
@@ -314,6 +343,11 @@
 
     window.sounds && window.sounds.playClick();
 
+    if (screenId === 'mapa') {
+      updateRoomClock();
+      updateRoomPresence();
+      updateProfileAvatarPreview();
+    }
     if (screenId === 'dibujo') initDrawingScreen();
     if (screenId === 'turnos') renderWordChain();
     if (screenId === 'trivia') initTriviaScreen();
@@ -346,6 +380,259 @@
       badge.innerHTML = '⭐ Recomendado según tu perfil';
       wordCard.insertBefore(badge, wordCard.children[1]);
     }
+  }
+
+  // ==========================================
+  // 3.1. SALÓN VIRTUAL ESPACIAL & AVATAR INTERACTIVO
+  // ==========================================
+  const STATIONS_DATA = {
+    trivia: {
+      key: 'trivia',
+      title: 'Rincón de Trivia',
+      icon: '⚡',
+      typeBadge: 'Rompehielos Rápido · 45s',
+      desc: '5 preguntas rápidas y entretenidas sobre hábitos de café, vida remota, música y bienestar. Gana medallas de aciertos sin rankings estresantes.',
+      duration: '45 segundos',
+      philosophy: 'Sin presiones ni competencia tóxica',
+      targetX: 30,
+      targetY: 34,
+      participants: [
+        { name: 'Lucía', tag: 'En trivia', color: '#F6C85F', status: 'Ronda activa' },
+        { name: 'Tomás', tag: 'Con café', color: '#7CC4A4', status: 'Terminó hace 2 min' }
+      ]
+    },
+    dibujo: {
+      key: 'dibujo',
+      title: 'Mesa de Dibujo',
+      icon: '🎨',
+      typeBadge: 'En vivo · Sincrónico',
+      desc: 'Lienzo interactivo en tiempo real donde trazas ideas con paleta de colores mientras tus compañeros adivinan la palabra en el chat.',
+      duration: 'Ronda de 1 min',
+      philosophy: 'Creatividad lúdica y colaborativa',
+      targetX: 70,
+      targetY: 34,
+      participants: [
+        { name: 'Sara', tag: 'Dibujando', color: '#B79CE0', status: 'Con pincel' },
+        { name: 'Juan', tag: 'Adivinando', color: '#C98B5B', status: 'En el chat' },
+        { name: 'Lucía', tag: 'Presente', color: '#F6C85F', status: 'Observando' }
+      ]
+    },
+    pasillo: {
+      key: 'pasillo',
+      title: 'El Pasillo (Café Virtual)',
+      icon: '💬',
+      typeBadge: 'Charla Informal · Baja Fricción',
+      desc: 'Encuentros espontáneos junto a la máquina de café. Comparte notas, responde al tema del día o escribe respuestas en hilos con compañeros.',
+      duration: 'Flexible · 2 a 5 min',
+      philosophy: 'Sin reuniones forzadas',
+      targetX: 30,
+      targetY: 66,
+      participants: [
+        { name: 'Tomás', tag: 'Café latte', color: '#7CC4A4', status: 'Tomando café' },
+        { name: 'Sara', tag: 'Descansando', color: '#B79CE0', status: 'Dejó nota' }
+      ]
+    },
+    turnos: {
+      key: 'turnos',
+      title: 'Rincón de Palabras',
+      icon: '🔤',
+      typeBadge: 'Por turnos · Asincrónico',
+      desc: 'Cadena de palabras encadenadas donde la última sílaba inicia el turno siguiente. Aporta cuando tengas un minuto libre en tu jornada.',
+      duration: 'Asincrónico (a tu ritmo)',
+      philosophy: 'Cero interrupciones de foco',
+      targetX: 70,
+      targetY: 66,
+      participants: [
+        { name: 'Tomás', tag: 'Aportó ayer', color: '#7CC4A4', status: 'Dejó palabra' },
+        { name: 'Sara', tag: 'Cadena activa', color: '#B79CE0', status: 'Esperando tu turno' }
+      ]
+    }
+  };
+
+  function walkAvatarTo(targetX, targetY, callback) {
+    const avatar = $('#roomMyAvatar');
+    if (!avatar) {
+      if (typeof callback === 'function') callback();
+      return;
+    }
+
+    // Limitar coordenadas dentro de la alfombra visual
+    const clampedX = Math.max(18, Math.min(82, targetX));
+    const clampedY = Math.max(22, Math.min(78, targetY));
+
+    // Determinar orientación de la mirada
+    if (clampedX < State.room.avatarX - 2) {
+      avatar.classList.add('facing-left');
+    } else if (clampedX > State.room.avatarX + 2) {
+      avatar.classList.remove('facing-left');
+    }
+
+    // Efecto de onda en el piso
+    triggerFloorRipple(clampedX, clampedY);
+
+    // Activar animación de caminado
+    avatar.classList.remove('arrived');
+    avatar.classList.add('walking');
+    State.room.isWalking = true;
+    window.sounds && window.sounds.playPop();
+
+    avatar.style.left = `${clampedX}%`;
+    avatar.style.top = `${clampedY}%`;
+
+    State.room.avatarX = clampedX;
+    State.room.avatarY = clampedY;
+
+    clearTimeout(avatar._walkTimer);
+    avatar._walkTimer = setTimeout(() => {
+      avatar.classList.remove('walking');
+      avatar.classList.add('arrived');
+      State.room.isWalking = false;
+
+      setTimeout(() => {
+        avatar.classList.remove('arrived');
+      }, 350);
+
+      if (typeof callback === 'function') {
+        callback();
+      }
+    }, 650);
+  }
+
+  function triggerFloorRipple(xPercent, yPercent) {
+    const ripple = $('#roomClickRipple');
+    if (!ripple) return;
+    ripple.style.left = `${xPercent}%`;
+    ripple.style.top = `${yPercent}%`;
+    ripple.hidden = false;
+    ripple.classList.remove('room-click-ripple');
+    void ripple.offsetWidth;
+    ripple.classList.add('room-click-ripple');
+    clearTimeout(ripple._timer);
+    ripple._timer = setTimeout(() => {
+      ripple.hidden = true;
+    }, 550);
+  }
+
+  function handleStationClick(stationKey) {
+    const station = STATIONS_DATA[stationKey];
+    if (!station) return;
+
+    State.room.selectedStation = stationKey;
+    walkAvatarTo(station.targetX, station.targetY, () => {
+      openStationModal(stationKey);
+    });
+  }
+
+  function openStationModal(stationKey) {
+    const station = STATIONS_DATA[stationKey];
+    if (!station) return;
+
+    const modal = $('#stationPreviewModal');
+    if (!modal) return;
+
+    $('#stationModalIcon').textContent = station.icon;
+    $('#stationModalTypeBadge').textContent = station.typeBadge;
+    $('#stationModalTitle').textContent = station.title;
+    $('#stationModalDesc').textContent = station.desc;
+    $('#stationModalDuration').textContent = station.duration;
+    $('#stationModalPhilosophy').textContent = station.philosophy;
+
+    const listEl = $('#stationModalParticipantsList');
+    if (listEl) {
+      let participants = [...station.participants];
+      if (!State.simulatedCompanionsEnabled) {
+        participants = [{ name: 'Mesa lista', tag: 'Espacio libre', color: '#888', status: 'Esperando que entres' }];
+      }
+
+      listEl.innerHTML = participants.map(p => `
+        <div class="station-participant-card">
+          <div class="avatar sm" style="width:24px;height:24px;--c:${p.color}">
+            <span class="avatar-smile"></span>
+          </div>
+          <div style="flex:1">
+            <b>${escapeHtml(p.name)}</b>
+            <span style="font-size:11.5px;color:var(--soft);margin-left:6px">${escapeHtml(p.tag)}</span>
+          </div>
+          <span class="status-pill sm" style="font-size:11px">${escapeHtml(p.status)}</span>
+        </div>
+      `).join('');
+    }
+
+    const enterBtn = $('#stationModalEnterBtn');
+    if (enterBtn) {
+      enterBtn.onclick = () => {
+        modal.close();
+        navigateTo(station.key);
+      };
+    }
+
+    modal.showModal();
+    window.sounds && window.sounds.playDing();
+  }
+
+  function handleFloorClick(e) {
+    if (e.target.closest('.station-booth') || e.target.closest('.room-user-avatar') || e.target.closest('button')) {
+      return;
+    }
+
+    const floor = $('#roomFloorCanvas');
+    if (!floor) return;
+
+    const rect = floor.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    walkAvatarTo(x, y);
+  }
+
+  function setRoomView(mode) {
+    State.room.view = mode;
+    localStorage.setItem('pb_room_view', mode);
+
+    const spatialView = $('#spatialRoomView');
+    const gridView = $('#gridRoomsView');
+    const btnSpatial = $('#btnViewSpatial');
+    const btnGrid = $('#btnViewGrid');
+
+    if (btnSpatial) btnSpatial.classList.toggle('active', mode === 'spatial');
+    if (btnGrid) btnGrid.classList.toggle('active', mode === 'grid');
+
+    if (spatialView) spatialView.hidden = (mode !== 'spatial');
+    if (gridView) gridView.hidden = (mode !== 'grid');
+
+    window.sounds && window.sounds.playClick();
+  }
+
+  function updateRoomClock() {
+    const clockBadge = $('#roomClockBadge');
+    if (!clockBadge) return;
+
+    const now = new Date();
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const dayName = days[now.getDay()];
+    let hours = now.getHours();
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'p. m.' : 'a. m.';
+    hours = hours % 12 || 12;
+
+    clockBadge.textContent = `${dayName}, ${hours}:${minutes} ${ampm}`;
+  }
+
+  function updateRoomPresence() {
+    const colleaguesLayer = $('#roomColleaguesLayer');
+    const onlineCountEl = $('#roomOnlineCount');
+
+    if (colleaguesLayer) {
+      colleaguesLayer.hidden = !State.simulatedCompanionsEnabled;
+    }
+
+    if (onlineCountEl) {
+      onlineCountEl.textContent = State.simulatedCompanionsEnabled ? '4' : '1 (Tú)';
+    }
+
+    $$('.booth-avatars').forEach(box => {
+      box.style.display = State.simulatedCompanionsEnabled ? 'flex' : 'none';
+    });
   }
 
   function stopDrawingTimers() {
@@ -1078,6 +1365,27 @@
 
     grid.innerHTML = State.pasillo.notes.map((note) => {
       const isMe = note.author === State.profile.name;
+      const replies = Array.isArray(note.replies) ? note.replies : [];
+
+      const repliesHtml = replies.length > 0 ? `
+        <div class="pasillo-replies-list" id="repliesList-${note.id}">
+          ${replies.map(r => `
+            <div class="pasillo-reply-item">
+              <div class="avatar sm" style="width:20px;height:20px;--c:${r.color || '#5F9E82'};flex-shrink:0">
+                <span class="avatar-smile"></span>
+              </div>
+              <div class="pasillo-reply-bubble">
+                <div class="reply-header">
+                  <b>${escapeHtml(r.author)}</b>
+                  <small>${escapeHtml(r.time || 'Reciente')}</small>
+                </div>
+                <div>${escapeHtml(r.text)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : '';
+
       return `
         <article class="pasillo-note ${isMe ? 'user' : ''}" data-note-id="${note.id}">
           <div class="pasillo-note-author">
@@ -1087,6 +1395,16 @@
             <span>${escapeHtml(note.author)}</span>
           </div>
           <p class="pasillo-note-text">${escapeHtml(note.text)}</p>
+
+          ${repliesHtml}
+
+          <!-- Formulario colapsable para responder a esta nota -->
+          <form class="pasillo-reply-form" id="replyForm-${note.id}" data-note-id="${note.id}" style="display:none">
+            <input type="text" placeholder="Escribe tu respuesta a ${escapeHtml(note.author)}..." maxlength="100" autocomplete="off" required>
+            <button type="submit" class="btn sm" style="padding:4px 10px;font-size:12px">Enviar</button>
+            <button type="button" class="btn alt sm" data-cancel-reply="${note.id}" style="padding:4px 8px;font-size:12px">✕</button>
+          </form>
+
           <div class="pasillo-note-footer">
             <span>${escapeHtml(note.time || 'Reciente')}</span>
             <div class="pasillo-reactions">
@@ -1094,6 +1412,9 @@
               <button type="button" class="pasillo-react-btn" data-react="🍪" data-note="${note.id}">🍪 ${note.reactions?.['🍪'] || 0}</button>
               <button type="button" class="pasillo-react-btn" data-react="👏" data-note="${note.id}">👏 ${note.reactions?.['👏'] || 0}</button>
             </div>
+            <button type="button" class="pasillo-reply-toggle-btn" data-toggle-reply="${note.id}">
+              💬 Responder ${replies.length > 0 ? `(${replies.length})` : ''}
+            </button>
           </div>
         </article>
       `;
@@ -1112,7 +1433,8 @@
       color: State.profile.color,
       text: clean,
       time: 'Hace un instante',
-      reactions: { '☕': 1, '🍪': 0, '👏': 0 }
+      reactions: { '☕': 1, '🍪': 0, '👏': 0 },
+      replies: []
     };
 
     State.pasillo.notes.push(newNote);
@@ -1129,6 +1451,108 @@
     window.sounds && window.sounds.playPop();
     toast('¡Dejaste tu nota en El Pasillo!');
     $('#pasilloInput').value = '';
+    renderPasilloScreen();
+
+    // Simular que un compañero reacciona o comenta amablemente después de 2s
+    if (State.simulatedCompanionsEnabled) {
+      setTimeout(() => {
+        simulateCompanionReactionToUser(newNote.id);
+      }, 2000);
+    }
+  }
+
+  function handlePasilloReply(noteId, text) {
+    const clean = text.trim();
+    if (!clean) return;
+
+    if (!State.pasillo.notes || State.pasillo.notes.length === 0) {
+      State.pasillo.notes = JSON.parse(JSON.stringify(INITIAL_PASILLO_NOTES));
+    }
+
+    const note = State.pasillo.notes.find(n => String(n.id) === String(noteId));
+    if (!note) return;
+
+    if (!Array.isArray(note.replies)) {
+      note.replies = [];
+    }
+
+    const newReply = {
+      id: Date.now(),
+      author: State.profile.name,
+      color: State.profile.color,
+      text: clean,
+      time: 'Hace un instante'
+    };
+
+    note.replies.push(newReply);
+    localStorage.setItem('pb_pasillo_notes', JSON.stringify(State.pasillo.notes));
+    State.profile.stats.pasillo = (State.profile.stats.pasillo || 0) + 1;
+    saveProfileStats();
+
+    checkAndUnlockAchievement('pasillo');
+
+    if (State.p2p.connection) {
+      sendPeerMessage({ type: 'pasillo_reply', noteId: note.id, reply: newReply });
+    }
+
+    window.sounds && window.sounds.playPop();
+    toast(`¡Respondiste a la nota de ${note.author}!`);
+    renderPasilloScreen();
+
+    // Si los compañeros están activos y no es nota propia, simular respuesta de vuelta
+    if (State.simulatedCompanionsEnabled && note.author !== State.profile.name) {
+      setTimeout(() => {
+        simulateCompanionReplyBack(note.id, note.author);
+      }, 1600);
+    }
+  }
+
+  function simulateCompanionReplyBack(noteId, targetAuthor) {
+    const note = State.pasillo.notes.find(n => String(n.id) === String(noteId));
+    if (!note) return;
+
+    const repliesPool = [
+      `¡Totalmente de acuerdo contigo, ${State.profile.name}!`,
+      `¡Buenísimo ese dato, lo voy a probar hoy mismo!`,
+      `¡Jaja exacto! Me pasó tal cual esta semana.`,
+      `¡Qué buena recomendación! Gracias por compartir 🙌`,
+      `¡Sii! Eso cambia por completo el día de trabajo.`
+    ];
+
+    const replyText = repliesPool[Math.floor(Math.random() * repliesPool.length)];
+    const friend = State.virtualFriends.find(f => f.name === targetAuthor) || State.virtualFriends[0];
+
+    if (!Array.isArray(note.replies)) note.replies = [];
+
+    note.replies.push({
+      id: Date.now(),
+      author: friend.name,
+      color: friend.color,
+      text: replyText,
+      time: 'Hace un momento'
+    });
+
+    if (!note.reactions) note.reactions = {};
+    note.reactions['☕'] = (note.reactions['☕'] || 0) + 1;
+
+    localStorage.setItem('pb_pasillo_notes', JSON.stringify(State.pasillo.notes));
+    window.sounds && window.sounds.playDing();
+    toast(`💬 ${friend.name} te respondió en El Pasillo.`);
+    renderPasilloScreen();
+  }
+
+  function simulateCompanionReactionToUser(noteId) {
+    const note = State.pasillo.notes.find(n => String(n.id) === String(noteId));
+    if (!note) return;
+
+    const friend = State.virtualFriends[Math.floor(Math.random() * State.virtualFriends.length)];
+    const emoji = ['☕', '🍪', '👏'][Math.floor(Math.random() * 3)];
+    if (!note.reactions) note.reactions = {};
+    note.reactions[emoji] = (note.reactions[emoji] || 0) + 1;
+
+    localStorage.setItem('pb_pasillo_notes', JSON.stringify(State.pasillo.notes));
+    window.sounds && window.sounds.playDing();
+    toast(`✨ ${friend.name} reaccionó con ${emoji} a tu nota.`);
     renderPasilloScreen();
   }
 
@@ -1159,7 +1583,8 @@
       color: friend.color,
       text: text,
       time: 'Hace un momento',
-      reactions: { '☕': 2, '🍪': 1, '👏': 3 }
+      reactions: { '☕': 2, '🍪': 1, '👏': 3 },
+      replies: []
     };
 
     State.pasillo.notes.push(note);
@@ -1484,6 +1909,18 @@
         renderPasilloScreen();
         window.sounds && window.sounds.playDing();
         break;
+
+      case 'pasillo_reply':
+        const targetNote = State.pasillo.notes.find(n => String(n.id) === String(data.noteId));
+        if (targetNote) {
+          if (!Array.isArray(targetNote.replies)) targetNote.replies = [];
+          targetNote.replies.push(data.reply);
+          localStorage.setItem('pb_pasillo_notes', JSON.stringify(State.pasillo.notes));
+          renderPasilloScreen();
+          window.sounds && window.sounds.playDing();
+          toast(`💬 ${data.reply.author} respondió a una nota en El Pasillo.`);
+        }
+        break;
     }
   }
 
@@ -1635,6 +2072,10 @@
     if (sideAv) sideAv.style.setProperty('--c', State.profile.color);
     const sideName = $('#sidebarUserName');
     if (sideName) sideName.textContent = State.profile.name;
+    const roomAv = $('#roomMyAvatar');
+    if (roomAv) roomAv.style.setProperty('--c', State.profile.color);
+    const roomName = $('#roomMyAvatarName');
+    if (roomName) roomName.textContent = State.profile.name;
   }
 
   function saveProfileStats() {
@@ -1725,8 +2166,9 @@
   // ==========================================
   function triggerConfetti() {
     const cvs = $('#confettiCanvas');
-    if (!cvs) return;
+    if (!cvs || !cvs.getContext) return;
     const c = cvs.getContext('2d');
+    if (!c) return;
     cvs.width = window.innerWidth;
     cvs.height = window.innerHeight;
 
@@ -1793,9 +2235,54 @@
         return;
       }
 
+      // Estaciones espaciales en el salón
+      const booth = e.target.closest('.station-booth');
+      if (booth) {
+        handleStationClick(booth.dataset.station);
+        return;
+      }
+
+      // Tarjetas en vista cuadrícula
+      const stationCard = e.target.closest('.room-card[data-station]');
+      if (stationCard && State.room.view === 'grid') {
+        openStationModal(stationCard.dataset.station);
+        return;
+      }
+
+      // Conmutador de vista (Salón vs Cuadrícula)
+      const switchViewBtn = e.target.closest('[data-act="switch-view"]');
+      if (switchViewBtn) {
+        setRoomView(switchViewBtn.dataset.view);
+        return;
+      }
+
       const reactBtn = e.target.closest('[data-react]');
       if (reactBtn) {
         handlePasilloReaction(reactBtn.dataset.note, reactBtn.dataset.react);
+        return;
+      }
+
+      // Desplegar / ocultar caja de respuesta en El Pasillo
+      const toggleReplyBtn = e.target.closest('[data-toggle-reply]');
+      if (toggleReplyBtn) {
+        const noteId = toggleReplyBtn.dataset.toggleReply;
+        const form = $(`#replyForm-${noteId}`);
+        if (form) {
+          const isHidden = form.style.display === 'none';
+          form.style.display = isHidden ? 'flex' : 'none';
+          if (isHidden) {
+            const input = form.querySelector('input');
+            if (input) input.focus();
+          }
+        }
+        return;
+      }
+
+      const cancelReplyBtn = e.target.closest('[data-cancel-reply]');
+      if (cancelReplyBtn) {
+        const noteId = cancelReplyBtn.dataset.cancelReply;
+        const form = $(`#replyForm-${noteId}`);
+        if (form) form.style.display = 'none';
         return;
       }
 
@@ -1846,6 +2333,25 @@
       }
     });
 
+    // Clic en el suelo del salón virtual para caminar libremente
+    const floorCanvas = $('#roomFloorCanvas');
+    if (floorCanvas) {
+      floorCanvas.addEventListener('click', handleFloorClick);
+    }
+
+    // Respuestas en hilos de El Pasillo
+    document.addEventListener('submit', (e) => {
+      const replyForm = e.target.closest('.pasillo-reply-form');
+      if (replyForm) {
+        e.preventDefault();
+        const noteId = replyForm.dataset.noteId;
+        const input = replyForm.querySelector('input');
+        if (input && input.value.trim()) {
+          handlePasilloReply(noteId, input.value.trim());
+        }
+      }
+    });
+
     $('#guessForm')?.addEventListener('submit', (e) => {
       e.preventDefault();
       const input = $('#guessInput');
@@ -1887,6 +2393,7 @@
       localStorage.setItem('pb_sim_companions', State.simulatedCompanionsEnabled);
       renderDrawingPlayers();
       renderScoreboard();
+      updateRoomPresence();
       toast(State.simulatedCompanionsEnabled ? 
         'Compañeros de prueba activados (Sara, Tomás, Lucía).' : 
         'Modo solo tú activado.');
@@ -2046,6 +2553,18 @@
     updateRecommendedRoomBadge();
     setupEventListeners();
     initPeerJS();
+
+    // Inicializar Salón Espacial (Reloj, presencia, vista y posición de avatar)
+    updateRoomClock();
+    setInterval(updateRoomClock, 30000);
+    updateRoomPresence();
+    setRoomView(State.room.view);
+
+    const myAvatar = $('#roomMyAvatar');
+    if (myAvatar) {
+      myAvatar.style.left = `${State.room.avatarX}%`;
+      myAvatar.style.top = `${State.room.avatarY}%`;
+    }
 
     const initialHash = (location.hash || '').replace('#', '');
     navigateTo(initialHash || 'mapa');

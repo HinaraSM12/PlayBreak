@@ -105,23 +105,178 @@
              PANTALLA 1: LA SALA DE DESCANSO (THE HUB) - 4 ACTIVIDADES
              ======================================================== -->
         <section class="screen-view active" id="screen-mapa" aria-labelledby="heading-mapa">
-          <div class="page-col">
+          <div class="page-col" style="max-width: 960px;">
             <div class="header-banner">
               <div>
                 <h1 id="heading-mapa">La Sala de Descanso</h1>
-                <p class="subtitle">Tómate 5 minutos. Elige cómo quieres despejar la mente hoy con 4 actividades.</p>
+                <p class="subtitle" id="roomLiveSubtitle">Tómate 5 minutos. Elige cómo quieres despejar la mente hoy con 4 actividades.</p>
               </div>
-              <span class="status-pill">
-                <span class="dot"></span>
-                Espacio Abierto
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span class="room-clock-badge" id="roomClockBadge">Martes, 2:40 p. m.</span>
+                <span class="status-pill">
+                  <span class="dot"></span>
+                  Espacio Abierto
+                </span>
+              </div>
+            </div>
+
+            <!-- Selector de Vista: Salón Virtual 🛋️ vs Cuadrícula 📋 -->
+            <div class="view-switch-bar">
+              <div class="view-switch-buttons">
+                <button type="button" class="view-switch-btn active" id="btnViewSpatial" data-act="switch-view" data-view="spatial">
+                  🛋️ Salón Virtual Interactivo
+                </button>
+                <button type="button" class="view-switch-btn" id="btnViewGrid" data-act="switch-view" data-view="grid">
+                  📋 Vista de Rincones
+                </button>
+              </div>
+              <span class="room-presence-badge" id="roomPresenceBadge">
+                🟢 <span id="roomOnlineCount">4</span> compañeros en la sala
               </span>
             </div>
 
-            <!-- Grilla de las 4 Actividades Lúdicas -->
-            <div class="rooms-grid">
+            <!-- ========================================================
+                 VISTA 1: EL SALÓN VIRTUAL ESPACIAL (TOP-DOWN INTERACTIVO)
+                 ======================================================== -->
+            <div class="virtual-room-wrapper" id="spatialRoomView">
+              
+              <!-- Marco Decorativo del Salón con Alfombra Verde/Cuadros y Madera -->
+              <div class="virtual-room-frame">
+                
+                <!-- Planta decorativa superior izquierda -->
+                <div class="room-prop prop-plant-tl" title="Monstera deliciosa">🪴</div>
+                
+                <!-- Cafetera superior derecha con vapor -->
+                <div class="room-prop prop-coffee-tr" title="Cafetera de la oficina">
+                  <span class="steam-particle">♨️</span>
+                  ☕
+                </div>
+
+                <!-- Pila de libros / rincón relajante inferior izquierda -->
+                <div class="room-prop prop-books-bl" title="Rincón de lectura y calma">📚</div>
+
+                <!-- Planta helecho inferior derecha -->
+                <div class="room-prop prop-plant-br" title="Helecho de bienestar">🌿</div>
+
+                <!-- El Suelo Interactivo de la Sala (Checkered Carpet) -->
+                <div class="virtual-room-floor" id="roomFloorCanvas" aria-label="Suelo de la sala de descanso">
+                  
+                  <!-- Alfombra Central Ovalada con Borde Punteado -->
+                  <div class="room-carpet-lounge" id="roomCenterRug">
+                    <div class="carpet-table">☕</div>
+                    <span class="carpet-cue">Toca una estación para caminar hacia ella</span>
+                  </div>
+
+                  <!-- 4 Estaciones Espaciales Colocadas en las 4 Esquinas/Lados -->
+                  
+                  <!-- Estación 1: Rincón de Trivia (Arriba Izquierda) -->
+                  <div class="station-booth booth-trivia" data-station="trivia" style="--booth-accent:#5F9E82" title="Toca para caminar a la Trivia Relámpago">
+                    <div class="booth-top-badge" style="background:var(--sky-soft);border-color:var(--sky)">
+                      <span class="booth-icon">⚡</span>
+                    </div>
+                    <div class="booth-info">
+                      <div class="booth-title">Rincón de Trivia</div>
+                      <div class="booth-status">En vivo · 45s</div>
+                      <div class="booth-avatars" id="boothAvatarsTrivia">
+                        <div class="mini-avatar" style="--c:#F6C85F" title="Lucía jugando"><span></span></div>
+                        <div class="mini-avatar" style="--c:#7CC4A4" title="Tomás jugando"><span></span></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Estación 2: Mesa de Dibujo (Arriba Derecha) -->
+                  <div class="station-booth booth-dibujo" data-station="dibujo" style="--booth-accent:#E5A338" title="Toca para caminar a la Mesa de Dibujo">
+                    <div class="booth-top-badge" style="background:var(--sun-soft);border-color:var(--sun)">
+                      <span class="booth-icon">🎨</span>
+                    </div>
+                    <div class="booth-info">
+                      <div class="booth-title">Mesa de Dibujo</div>
+                      <div class="booth-status">En vivo · 3 aquí</div>
+                      <div class="booth-avatars" id="boothAvatarsDibujo">
+                        <div class="mini-avatar" style="--c:#B79CE0" title="Sara dibujando"><span></span></div>
+                        <div class="mini-avatar" style="--c:#C98B5B" title="Juan adivinando"><span></span></div>
+                        <div class="mini-avatar" style="--c:#F6C85F" title="Lucía presente"><span></span></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Estación 3: El Pasillo / Café Virtual (Abajo Izquierda) -->
+                  <div class="station-booth booth-pasillo" data-station="pasillo" style="--booth-accent:#7A4E2D" title="Toca para caminar a El Pasillo">
+                    <div class="booth-top-badge" style="background:var(--sand);border-color:var(--wood)">
+                      <span class="booth-icon">💬</span>
+                    </div>
+                    <div class="booth-info">
+                      <div class="booth-title">El Pasillo (Café)</div>
+                      <div class="booth-status">Charla relajada</div>
+                      <div class="booth-avatars" id="boothAvatarsPasillo">
+                        <div class="mini-avatar" style="--c:#7CC4A4" title="Tomás charlando"><span></span></div>
+                        <div class="mini-avatar" style="--c:#B79CE0" title="Sara tomando café"><span></span></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Estación 4: Rincón de Palabras (Abajo Derecha) -->
+                  <div class="station-booth booth-turnos" data-station="turnos" style="--booth-accent:#5B9BC4" title="Toca para caminar al Rincón de Palabras">
+                    <div class="booth-top-badge" style="background:var(--panel-subtle);border-color:var(--line)">
+                      <span class="booth-icon">🔤</span>
+                    </div>
+                    <div class="booth-info">
+                      <div class="booth-title">Rincón de Palabras</div>
+                      <div class="booth-status">Por turnos · sin prisa</div>
+                      <div class="booth-avatars" id="boothAvatarsTurnos">
+                        <div class="mini-avatar" style="--c:#7CC4A4" title="Tomás aportó ayer"><span></span></div>
+                        <div class="mini-avatar" style="--c:#B79CE0" title="Sara aportó"><span></span></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Capa de Compañeros Virtuales Descansando en el Salón -->
+                  <div class="room-colleagues-layer" id="roomColleaguesLayer">
+                    <div class="colleague-character" id="colleagueSara" style="left:76%;top:38%;--c:#B79CE0" title="Sara descansando">
+                      <div class="char-avatar"><span class="avatar-smile"></span></div>
+                      <span class="char-tag">Sara 🎨</span>
+                    </div>
+                    <div class="colleague-character" id="colleagueTomas" style="left:26%;top:70%;--c:#7CC4A4" title="Tomás con café">
+                      <div class="char-avatar"><span class="avatar-smile"></span></div>
+                      <span class="char-tag">Tomás ☕</span>
+                    </div>
+                    <div class="colleague-character" id="colleagueLucia" style="left:26%;top:36%;--c:#F6C85F" title="Lucía en trivia">
+                      <div class="char-avatar"><span class="avatar-smile"></span></div>
+                      <span class="char-tag">Lucía ⚡</span>
+                    </div>
+                  </div>
+
+                  <!-- El Avatar del Usuario ("Tú") que se mueve suavemente por la sala -->
+                  <div class="room-user-avatar" id="roomMyAvatar" style="left:50%;top:50%;--c:#5F9E82">
+                    <div class="avatar-shadow"></div>
+                    <div class="avatar-body">
+                      <span class="avatar-smile"></span>
+                    </div>
+                    <div class="avatar-nametag" id="roomMyAvatarName">Tú</div>
+                    <div class="avatar-status-pill">En descanso</div>
+                  </div>
+
+                  <!-- Onda expansiva táctil de destino al hacer clic -->
+                  <div class="room-click-ripple" id="roomClickRipple" hidden></div>
+
+                </div>
+
+                <!-- Barra inferior de la sala con instrucciones amables -->
+                <div class="room-floor-footer">
+                  <span>💡 Toca una estación para que tu avatar camine hacia ella · O haz clic en cualquier zona para explorar.</span>
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- ========================================================
+                 VISTA 2: CUADRÍCULA CLÁSICA DE TARJETAS (OPCIONAL/ACCESIBLE)
+                 ======================================================== -->
+            <div class="rooms-grid" id="gridRoomsView" hidden>
               
               <!-- Rincón 1: Mesa de Dibujo -->
-              <article class="room-card live">
+              <article class="room-card live" data-station="dibujo">
                 <div class="room-icon-badge">🎨</div>
                 <span class="room-tag live">En vivo · Sincrónico</span>
                 <h2>Mesa de Dibujo</h2>
@@ -135,7 +290,7 @@
               </article>
 
               <!-- Rincón 2: Rincón de Palabras -->
-              <article class="room-card async">
+              <article class="room-card async" data-station="turnos">
                 <div class="room-icon-badge">🔤</div>
                 <span class="room-tag async">Por turnos · Asincrónico</span>
                 <h2>Rincón de Palabras</h2>
@@ -149,12 +304,12 @@
               </article>
 
               <!-- Rincón 3: Trivia Relámpago -->
-              <article class="room-card trivia">
+              <article class="room-card trivia" data-station="trivia">
                 <div class="room-icon-badge">⚡</div>
                 <span class="room-tag quick">Rompehielos Rápido</span>
                 <h2>Trivia Relámpago</h2>
                 <p style="color:var(--soft);font-size:14px">
-                  3 preguntas ligeras sobre gustos de café, hábitos de descanso y anécdotas de teletrabajo.
+                  5 preguntas rápidas sobre hábitos de café, vida remota, música y bienestar con medallas de premio.
                 </p>
                 <div class="room-footer">
                   <span style="font-size:12.5px;color:var(--soft);font-weight:700">Duración: 45 segundos</span>
@@ -163,12 +318,12 @@
               </article>
 
               <!-- Rincón 4: El Pasillo (Café Virtual) -->
-              <article class="room-card chat">
+              <article class="room-card chat" data-station="pasillo">
                 <div class="room-icon-badge">💬</div>
                 <span class="room-tag chill">Charla Informal · Baja Fricción</span>
                 <h2>El Pasillo (Café Virtual)</h2>
                 <p style="color:var(--soft);font-size:14px">
-                  Encuentros espontáneos junto a la máquina de café. Comparte una anécdota, responde la pregunta del día o reacciona con emojis.
+                  Encuentros espontáneos junto a la máquina de café. Comparte notas, responde a tus compañeros o reacciona con emojis.
                 </p>
                 <div class="room-footer">
                   <span style="font-size:12.5px;color:var(--soft);font-weight:700">Chat relajado</span>
@@ -183,7 +338,7 @@
               <div class="companion-toggle-text">
                 <h4>🧪 Modo de Demostración & Compañeros Virtuales</h4>
                 <p>
-                  Por defecto la sala empieza limpia (solo estás tú). Si estás probando la app a solas, activa los compañeros simulados (Sara, Tomás, Lucía) para ver cómo funciona el multijugador y verlos adivinar automáticamente en vivo.
+                  Por defecto la sala empieza limpia (solo estás tú). Si estás probando la app a solas, activa los compañeros simulados (Sara, Tomás, Lucía) para ver cómo funciona el multijugador y verlos presentes en el salón.
                 </p>
               </div>
               <label style="display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer">
@@ -674,6 +829,45 @@
       <div class="actions-row center">
         <button type="button" class="btn" data-act="confirm-join-room">Conectarse</button>
         <button type="button" class="btn alt" onclick="document.getElementById('joinRoomDialog').close()">Cancelar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Diálogo Nativo: Previsualización de Estación & Entrada -->
+  <dialog id="stationPreviewModal">
+    <div class="modal-card station-modal-card">
+      <div class="station-modal-header">
+        <div class="station-modal-icon-badge" id="stationModalIcon">🎨</div>
+        <div style="flex:1">
+          <span class="status-pill sm" id="stationModalTypeBadge">En vivo · Sincrónico</span>
+          <h2 id="stationModalTitle" style="margin-top:2px;font-size:20px">Mesa de Dibujo</h2>
+        </div>
+        <button type="button" class="btn ghost sm" onclick="document.getElementById('stationPreviewModal').close()" style="font-size:16px;padding:4px 8px">✕</button>
+      </div>
+
+      <div class="station-modal-desc-box">
+        <p id="stationModalDesc" style="font-size:14px;line-height:1.45;color:var(--ink)">
+          Dibuja en tiempo real en un lienzo interactivo y deja que tus compañeros adivinen la palabra secreta.
+        </p>
+        <div class="station-modal-meta-row">
+          <div><b>⏱️ Duración:</b> <span id="stationModalDuration">Ronda de 1 min</span></div>
+          <div><b>🌿 Modo:</b> <span id="stationModalPhilosophy">Sin presiones</span></div>
+        </div>
+      </div>
+
+      <div class="station-modal-people-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h4 style="font-size:12.5px;color:var(--soft);text-transform:uppercase;letter-spacing:0.04em">👥 Quiénes están en esta mesa ahora</h4>
+          <span class="status-pill sm" style="font-size:11px">En la sala</span>
+        </div>
+        <div class="station-people-list" id="stationModalParticipantsList">
+          <!-- Se llena dinámicamente -->
+        </div>
+      </div>
+
+      <div class="actions-row center" style="margin-top:var(--s3)">
+        <button type="button" class="btn" id="stationModalEnterBtn">🚀 Entrar a la actividad</button>
+        <button type="button" class="btn alt" onclick="document.getElementById('stationPreviewModal').close()">🚶 Quedarse en la sala</button>
       </div>
     </div>
   </dialog>
