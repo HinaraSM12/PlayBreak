@@ -2360,6 +2360,294 @@
   }
 
   // ==========================================
+  function renderPostGameScreen() {
+    State.profile.stats.breaks++;
+    saveProfileStats();
+
+    const avatarsContainer = $('#postgameAvatars');
+    let participants = [{ name: State.profile.name, color: State.profile.color, isMe: true }];
+
+    if (State.simulatedCompanionsEnabled) {
+      participants.push(...State.virtualFriends);
+    }
+    State.draw.players.forEach(p => participants.push({ name: p, color: '#9B653C' }));
+
+    avatarsContainer.innerHTML = participants.map(p => `
+      <div class="avatar lg" data-avatar-name="${escapeHtml(p.name)}" id="${p.isMe ? 'postgameMyAvatar' : ''}" style="--c:${p.color}">
+        <span class="avatar-smile"></span>
+        <span class="avatar-tag">${escapeHtml(p.name)}</span>
+      </div>
+    `).join('');
+
+    generatePersonalizedIcebreaker();
+
+    // Si el usuario eligió "Con voz" en su perfil, sugerir activar el micro
+    if (State.profile.mode === 'voz' && !State.voice.enabled) {
+      toast('💡 Tu perfil prefiere voz: Puedes activar el micrófono en la barra inferior.');
+    }
+  }
+
+  function generatePersonalizedIcebreaker() {
+    const userTags = State.profile.tags;
+    let questionsPool = [];
+    let activeTag = null;
+
+    if (userTags && userTags.length > 0) {
+      activeTag = userTags[Math.floor(Math.random() * userTags.length)];
+      if (ICEBREAKER_BY_TAG[activeTag]) {
+        questionsPool = ICEBREAKER_BY_TAG[activeTag];
+      }
+    }
+
+    if (!questionsPool.length) {
+      questionsPool = DEFAULT_ICEBREAKERS;
+    }
+
+    const q = questionsPool[Math.floor(Math.random() * questionsPool.length)];
+    const el = $('#icebreakerQuestion');
+    const tagBadge = $('#icebreakerTagBadge');
+
+    if (el) {
+      el.textContent = `«${q}»`;
+    }
+    if (tagBadge) {
+      tagBadge.textContent = activeTag ? `🎯 Pregunta afinada a tus gustos (${activeTag})` : `☕ Pregunta para charlar`;
+    }
+  }
+
+  // ==========================================
+  // 11. PERFIL Y PERSONALIZACIÓN ("TU RINCÓN")
+  // ==========================================
+  const SWATCH_COLORS = ['#C98B5B', '#D96951', '#5B9BC4', '#5F9E82', '#E5A338', '#9B653C', '#7B68EE', '#E06D8C'];
+  const AVAILABLE_TAGS = ['Cine', 'Series', 'Videojuegos', 'Música', 'Senderismo', 'Cocina', 'Lectura', 'Fútbol', 'Café', 'Mascotas', 'Fotografía', 'Viajes'];
+
+  function renderProfileScreen() {
+    $('#profileNameInput').value = State.profile.name;
+    updateProfileAvatarPreview();
+
+    const swatches = $('#colorSwatches');
+    swatches.innerHTML = SWATCH_COLORS.map(c => `
+      <button type="button" class="swatch-btn ${c === State.profile.color ? 'active' : ''}" 
+        style="--c:${c}" data-swatch="${c}" aria-label="Color ${c}"></button>
+    `).join('');
+
+    const tagsCloud = $('#profileTagsCloud');
+    tagsCloud.innerHTML = AVAILABLE_TAGS.map(t => {
+      const active = State.profile.tags.includes(t);
+      return `<button type="button" class="tag-btn" data-tag="${t}" aria-pressed="${active}">${escapeHtml(t)}</button>`;
+    }).join('');
+
+    $('input[name="prefModo"]').forEach(radio => {
+      radio.checked = radio.value === State.profile.mode;
+    });
+
+    $('#statBreaks').textContent = State.profile.stats.breaks;
+    $('#statDrawings').textContent = State.profile.stats.drawings;
+    $('#statWords').textContent = State.profile.stats.words;
+
+    // Nivel y barra de bienestar
+    renderLevelAndAchievements();
+  }
+
+  function renderLevelAndAchievements() {
+    const totalBreaks = State.profile.stats.breaks;
+    let levelTitle = "Nivel 1: 🌱 Novato del Descanso";
+    let progressPct = Math.min((totalBreaks / 5) * 100, 100);
+
+    if (totalBreaks >= 10) {
+      levelTitle = "Nivel 3: 🌳 Maestro Zen del Bienestar";
+      progressPct = 100;
+    } else if (totalBreaks >= 5) {
+      levelTitle = "Nivel 2: 🌿 Amigo de las Pausas";
+      progressPct = Math.min(((totalBreaks - 5) / 5) * 100, 100);
+    }
+
+    const titleEl = $('#profileLevelTitle');
+    const barEl = $('#profileLevelProgressBar');
+    if (titleEl) titleEl.textContent = levelTitle;
+    if (barEl) barEl.style.width = `${progressPct}%`;
+
+    // Renderizar logros
+    const achList = $('#achievementsGrid');
+    if (!achList) return;
+
+    const achs = [
+      { key: 'picasso', icon: '🎨', title: 'Picasso del Break', desc: 'Gana 1 ronda de dibujo', unlocked: State.profile.achievements.picasso },
+      { key: 'wordsmith', icon: '🔤', title: 'Diccionario Ágil', desc: 'Aporta 3 palabras encadenadas', unlocked: State.profile.achievements.wordsmith },
+      { key: 'trivia', icon: '⚡', title: 'Mente Brillante', desc: 'Gana 200+ pts en Trivia Relámpago', unlocked: State.profile.achievements.trivia },
+      { key: 'pasillo', icon: '💬', title: 'Alma del Pasillo', desc: 'Deja una nota en el café', unlocked: State.profile.achievements.pasillo }
+    ];
+
+    achList.innerHTML = achs.map(a => `
+      <div class="achievement-badge ${a.unlocked ? 'unlocked' : 'locked'}">
+        <div class="ach-icon">${a.icon}</div>
+        <div>
+          <b>${escapeHtml(a.title)}</b>
+          <small>${escapeHtml(a.desc)}</small>
+        </div>
+        <span class="ach-status">${a.unlocked ? '✅ Desbloqueado' : '🔒 Pendiente'}</span>
+      </div>
+    `).join('');
+  }
+
+  function updateProfileAvatarPreview() {
+    const preview = $('#profileAvatarPreview');
+    if (preview) preview.style.setProperty('--c', State.profile.color);
+    const sideAv = $('#sidebarUserAvatar');
+    if (sideAv) sideAv.style.setProperty('--c', State.profile.color);
+    const sideName = $('#sidebarUserName');
+    if (sideName) sideName.textContent = State.profile.name;
+    const roomAv = $('#roomMyAvatar');
+    if (roomAv) roomAv.style.setProperty('--c', State.profile.color);
+    const roomName = $('#roomMyAvatarName');
+    if (roomName) roomName.textContent = State.profile.name;
+  }
+
+  function saveProfileStats() {
+    localStorage.setItem('pb_stats', JSON.stringify(State.profile.stats));
+  }
+
+  function saveProfile() {
+    const name = $('#profileNameInput').value.trim() || 'Tú';
+    State.profile.name = name;
+    localStorage.setItem('pb_name', name);
+
+    const mode = $('input[name="prefModo"]:checked')?.value || 'texto';
+    State.profile.mode = mode;
+    localStorage.setItem('pb_mode', mode);
+
+    localStorage.setItem('pb_tags', JSON.stringify(State.profile.tags));
+    localStorage.setItem('pb_color', State.profile.color);
+
+    updateProfileAvatarPreview();
+    updateRecommendedRoomBadge();
+
+    window.sounds && window.sounds.playSuccess();
+    toast('¡Perfil y preferencias guardados con éxito!');
+  }
+
+  function checkAndUnlockAchievement(key) {
+    if (!State.profile.achievements) {
+      State.profile.achievements = { picasso: false, wordsmith: false, trivia: false, pasillo: false };
+    }
+    if (!State.profile.achievements[key]) {
+      State.profile.achievements[key] = true;
+      localStorage.setItem('pb_achievements', JSON.stringify(State.profile.achievements));
+      const names = {
+        picasso: '🎨 Picasso del Break (Ronda ganada)',
+        wordsmith: '🔤 Diccionario Ágil (3 palabras aportadas)',
+        trivia: '⚡ Mente Brillante (Experto en Trivia)',
+        pasillo: '💬 Alma del Pasillo (Nota en el café)'
+      };
+      toast(`🏆 ¡Logro desbloqueado: ${names[key] || key}!`);
+      window.sounds && window.sounds.playSuccess();
+      triggerConfetti();
+      renderLevelAndAchievements();
+    }
+  }
+
+  function updateRecommendedRoomBadge() {
+    $('.recommend-badge').forEach(el => el.remove());
+    $('.room-card').forEach(el => el.classList.remove('recommended'));
+
+    const mode = State.profile.mode || 'texto';
+    if (mode === 'turnos') {
+      const card = $('.room-card.async');
+      if (card) {
+        card.classList.add('recommended');
+        const b = document.createElement('div');
+        b.className = 'recommend-badge';
+        b.innerHTML = '✨ Recomendada para ti (Modo Asíncrono)';
+        card.prepend(b);
+      }
+    } else if (mode === 'voz') {
+      const card = $('.room-card.live');
+      if (card) {
+        card.classList.add('recommended');
+        const b = document.createElement('div');
+        b.className = 'recommend-badge';
+        b.innerHTML = '🎙️ Recomendada para ti (Modo Voz)';
+        card.prepend(b);
+      }
+    } else { // texto
+      const card = $('.room-card.chat');
+      if (card) {
+        card.classList.add('recommended');
+        const b = document.createElement('div');
+        b.className = 'recommend-badge';
+        b.innerHTML = '💬 Recomendada para ti (Solo Texto)';
+        card.prepend(b);
+      }
+    }
+
+    const sideName = $('#sidebarUserName');
+    const sideAv = $('#sidebarUserAvatar');
+    if (sideName) sideName.textContent = State.profile.name;
+    if (sideAv) sideAv.style.setProperty('--c', State.profile.color);
+  }
+
+  // ==========================================
+  // 12. CONFETI NATIVO (CANVAS)
+  // ==========================================
+  function triggerConfetti() {
+    const cvs = $('#confettiCanvas');
+    if (!cvs || !cvs.getContext) return;
+    const c = cvs.getContext('2d');
+    if (!c) return;
+    cvs.width = window.innerWidth;
+    cvs.height = window.innerHeight;
+
+    const colors = ['#7A4E2D', '#D96951', '#5B9BC4', '#5F9E82', '#E5A338', '#FFFFFF'];
+    const particles = [];
+
+    for (let i = 0; i < 75; i++) {
+      particles.push({
+        x: cvs.width / 2 + (Math.random() - 0.5) * 200,
+        y: cvs.height / 2 + (Math.random() - 0.5) * 100,
+        vx: (Math.random() - 0.5) * 12,
+        vy: -Math.random() * 10 - 4,
+        size: Math.random() * 8 + 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rotation: Math.random() * 360,
+        vr: (Math.random() - 0.5) * 10,
+        opacity: 1
+      });
+    }
+
+    let frames = 0;
+    function animate() {
+      c.clearRect(0, 0, cvs.width, cvs.height);
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.3;
+        p.rotation += p.vr;
+        p.opacity -= 0.012;
+
+        c.save();
+        c.translate(p.x, p.y);
+        c.rotate((p.rotation * Math.PI) / 180);
+        c.fillStyle = p.color;
+        c.globalAlpha = Math.max(p.opacity, 0);
+        c.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+        c.restore();
+      });
+
+      frames++;
+      if (frames < 90) {
+        requestAnimationFrame(animate);
+      } else {
+        c.clearRect(0, 0, cvs.width, cvs.height);
+      }
+    }
+    animate();
+  }
+
+  // ==========================================
+  // 13. MANEJADORES DE EVENTOS
+  // ==========================================
+  
+
   // 10. GESTIÓN DE EVENTOS Y ENLACES
   // ==========================================
   function setupEventListeners() {

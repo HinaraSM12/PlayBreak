@@ -2490,10 +2490,7 @@ dialog::backdrop {
   background: var(--bg);
 }
 
-@media (max-width: 760px) {
-  .virtual-room-floor {
-    min-height: 480px;
-  }
+
   .station-booth {
     width: 145px;
     padding: 8px 10px;
@@ -2527,4 +2524,531 @@ dialog::backdrop {
   pointer-events: none !important;
   cursor: not-allowed !important;
   filter: contrast(0.97);
+}
+
+/* ==========================================================================
+   OPTIMIZACIÓN RESPONSIVE COMPLETA PARA MÓVILES (SMARTPHONES Y TABLETS)
+   ========================================================================== */
+
+/* 1. TABLETS Y MÓVILES (<= 820px) */
+@media (max-width: 820px) {
+  .app-container {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 1fr auto !important;
+    height: 100dvh !important;
+    min-height: -webkit-fill-available;
+    overflow: hidden !important;
+  }
+  
+  .sidebar {
+    grid-row: 2 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 60px !important;
+    z-index: 100 !important;
+    background: var(--card) !important;
+    border-right: none !important;
+    border-top: 1.5px solid var(--line) !important;
+    padding: 4px 6px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: 0 -4px 18px rgba(58, 46, 37, 0.08) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-around !important;
+  }
+  
+  .brand, .sidebar-footer, .user-mini-card, .philosophy-note {
+    display: none !important;
+  }
+  
+  .nav-links {
+    flex-direction: row !important;
+    margin-top: 0 !important;
+    width: 100% !important;
+    justify-content: space-around !important;
+    gap: 4px !important;
+  }
+  
+  .nav-btn {
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    border-radius: var(--r-md) !important;
+    min-width: 52px !important;
+    flex: 1 !important;
+  }
+  
+  .nav-btn .icon {
+    font-size: 17px !important;
+  }
+  
+  .nav-btn .text {
+    display: inline-block !important;
+    font-size: 9.5px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.2px;
+  }
+  
+  .viewport {
+    padding: 12px 12px 76px 12px !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .top-toolbar {
+    padding: 6px 10px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    justify-content: flex-start !important;
+  }
+
+  .proto-pill {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    font-size: 11px !important;
+    padding: 4px 9px !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+}
+
+/* 2. SMARTPHONES Y PANTALLAS PEQUEÑAS (<= 600px) */
+@media (max-width: 600px) {
+  /* Cabeceras de pantalla */
+  .screen-header {
+    margin-bottom: 12px !important;
+  }
+
+  .screen-header h1 {
+    font-size: 21px !important;
+    line-height: 1.25 !important;
+  }
+
+  .screen-header .subtitle {
+    font-size: 12px !important;
+  }
+
+  /* Barra de cambio de vista del salón */
+  .view-switch-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .view-switch-buttons {
+    display: flex !important;
+    width: 100% !important;
+    gap: 6px !important;
+  }
+
+  .view-switch-btn {
+    flex: 1 !important;
+    padding: 7px 8px !important;
+    font-size: 11.5px !important;
+    text-align: center !important;
+    border-radius: var(--r-pill) !important;
+  }
+
+  .room-presence-container {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    gap: 6px !important;
+  }
+
+  .room-presence-badge {
+    font-size: 11px !important;
+    padding: 5px 10px !important;
+    flex: 1 !important;
+    text-align: center !important;
+  }
+
+  #btnOpenOnlineModal {
+    font-size: 11px !important;
+    padding: 5px 10px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Salón Virtual Espacial (Top-down) */
+  .virtual-room-frame {
+    padding: 8px !important;
+    border-radius: var(--r-md) !important;
+    border-width: 6px !important;
+  }
+
+  .virtual-room-floor {
+    min-height: 420px !important;
+    aspect-ratio: 4 / 5 !important;
+    border-radius: var(--r-md) !important;
+  }
+
+  .station-booth {
+    width: 130px !important;
+    padding: 6px 8px !important;
+    border-radius: var(--r-md) !important;
+    box-shadow: 0 3px 10px rgba(58, 46, 37, 0.08) !important;
+  }
+
+  .station-booth .booth-title {
+    font-size: 11.5px !important;
+  }
+
+  .station-booth .booth-sub {
+    font-size: 9.5px !important;
+  }
+
+  .station-booth .booth-icon {
+    font-size: 17px !important;
+  }
+
+  .booth-trivia { top: 8px !important; left: 8px !important; }
+  .booth-dibujo { top: 8px !important; right: 8px !important; }
+  .booth-pasillo { bottom: 26px !important; left: 8px !important; }
+  .booth-turnos { bottom: 26px !important; right: 8px !important; }
+
+  .room-carpet-lounge {
+    width: 145px !important;
+    height: 85px !important;
+  }
+
+  .room-carpet-lounge span {
+    font-size: 8.5px !important;
+    line-height: 1.15 !important;
+    letter-spacing: 0.3px !important;
+  }
+
+  .room-user-avatar {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .room-user-avatar .avatar-nametag {
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+    bottom: -18px !important;
+  }
+
+  .room-user-avatar .avatar-status-pill {
+    font-size: 9px !important;
+    padding: 1px 5px !important;
+    top: -16px !important;
+  }
+
+  .room-floor-footer {
+    font-size: 10px !important;
+    padding: 5px 8px !important;
+  }
+
+  /* Vista de Tarjetas / Cuadrícula */
+  .rooms-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Mesa de Dibujo */
+  .drawing-container {
+    padding: 0 !important;
+  }
+
+  .draw-meta-bar {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    font-size: 12px !important;
+    padding: 8px 10px !important;
+  }
+
+  #drawRoleBanner {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+
+  .canvas-wrapper {
+    width: 100% !important;
+  }
+
+  #drawCanvas {
+    width: 100% !important;
+    height: 250px !important;
+    max-height: 250px !important;
+    touch-action: none !important;
+  }
+
+  .canvas-toolbar {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 8px 10px !important;
+    justify-content: space-between !important;
+  }
+
+  .color-palette {
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+  }
+
+  .color-btn {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+  }
+
+  .brush-btn {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+  }
+
+  .guess-section {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    margin-top: 10px !important;
+  }
+
+  #chatBox {
+    height: 150px !important;
+    max-height: 150px !important;
+  }
+
+  .chat-input-row {
+    display: flex !important;
+    gap: 6px !important;
+  }
+
+  .chat-input-row input {
+    flex: 1 !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+
+  .chat-input-row button {
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Rincón de Palabras */
+  .word-chain-box {
+    padding: 12px 10px !important;
+  }
+
+  .chain-list {
+    max-height: 280px !important;
+    gap: 8px !important;
+  }
+
+  .chain-item {
+    padding: 10px 12px !important;
+    border-radius: var(--r-md) !important;
+  }
+
+  .chain-item-word {
+    font-size: 16px !important;
+  }
+
+  .word-submit-form {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .word-submit-form input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+  }
+
+  .word-submit-form .btn {
+    width: 100% !important;
+    padding: 10px 16px !important;
+    font-size: 14px !important;
+    justify-content: center !important;
+  }
+
+  #wordTurnNotice {
+    padding: 10px 12px !important;
+    font-size: 12.5px !important;
+  }
+
+  /* Trivia Relámpago */
+  .trivia-card {
+    padding: 14px 12px !important;
+    border-radius: var(--r-lg) !important;
+  }
+
+  .trivia-question-text {
+    font-size: 16px !important;
+    line-height: 1.35 !important;
+  }
+
+  .trivia-options-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .trivia-opt-btn {
+    padding: 12px 14px !important;
+    font-size: 13px !important;
+    min-height: 48px !important;
+    border-radius: var(--r-md) !important;
+    text-align: left !important;
+    line-height: 1.3 !important;
+  }
+
+  /* El Pasillo (Café Virtual) */
+  .pasillo-topic-banner {
+    padding: 12px !important;
+    font-size: 14px !important;
+  }
+
+  .notes-board {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .sticky-note {
+    padding: 12px !important;
+    border-radius: var(--r-md) !important;
+  }
+
+  .pasillo-reply-form input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 12px !important;
+  }
+
+  /* La Cafetería */
+  .postgame-card {
+    padding: 16px 12px !important;
+  }
+
+  .postgame-avatars {
+    display: flex !important;
+    overflow-x: auto !important;
+    gap: 10px !important;
+    padding-bottom: 8px !important;
+    justify-content: flex-start !important;
+  }
+
+  .icebreaker-box p {
+    font-size: 15px !important;
+    line-height: 1.35 !important;
+  }
+
+  .voice-bar {
+    width: 100% !important;
+  }
+
+  .voice-bar .btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Perfil */
+  .profile-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .tag-pool {
+    gap: 6px !important;
+  }
+
+  .tag-btn {
+    padding: 4px 10px !important;
+    font-size: 11px !important;
+  }
+
+  /* Diálogos y Modales */
+  dialog {
+    max-width: 94vw !important;
+    width: 94vw !important;
+    border-radius: var(--r-lg) !important;
+    margin: auto !important;
+    padding: 0 !important;
+    border: 2px solid var(--line) !important;
+  }
+
+  .modal-card {
+    padding: 16px 14px !important;
+    max-height: 85dvh !important;
+    overflow-y: auto !important;
+  }
+
+  .station-modal-header h2 {
+    font-size: 18px !important;
+  }
+
+  .station-modal-body {
+    font-size: 12.5px !important;
+  }
+
+  .actions-row {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .actions-row .btn {
+    width: 100% !important;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+}
+
+/* 3. MÓVILES MUY COMPACTOS (<= 380px) */
+@media (max-width: 380px) {
+  .station-booth {
+    width: 115px !important;
+    padding: 5px 6px !important;
+  }
+
+  .station-booth .booth-title {
+    font-size: 10.5px !important;
+  }
+
+  .station-booth .booth-sub {
+    font-size: 8.5px !important;
+  }
+
+  .room-carpet-lounge {
+    width: 125px !important;
+    height: 75px !important;
+  }
+
+  .room-carpet-lounge span {
+    font-size: 7.5px !important;
+  }
+
+  .virtual-room-floor {
+    min-height: 380px !important;
+  }
+
+  .nav-btn {
+    min-width: 44px !important;
+    padding: 4px 6px !important;
+  }
+
+  .nav-btn .icon {
+    font-size: 15px !important;
+  }
+
+  .nav-btn .text {
+    font-size: 8.5px !important;
+  }
 }
