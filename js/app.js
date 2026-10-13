@@ -1,5 +1,6 @@
 /**
- * PlayBreak - Lógica de Aplicación Web Completa
+ * PlayBreak - Lógica de Aplicación Web Completa (v3.8)
+ * Con Multijugador Real WebRTC (PeerJS), Bots Activos en Vivo y 4 Actividades Lúdicas
  * Diseñado bajo principios de Usabilidad y HCI (Facultad de Minas - Grupo #7)
  */
 
@@ -19,11 +20,11 @@
       color: localStorage.getItem('pb_color') || '#C98B5B',
       tags: JSON.parse(localStorage.getItem('pb_tags') || '["Cine", "Café", "Música"]'),
       mode: localStorage.getItem('pb_mode') || 'texto',
-      stats: JSON.parse(localStorage.getItem('pb_stats') || '{"breaks": 0, "drawings": 0, "words": 0}')
+      stats: JSON.parse(localStorage.getItem('pb_stats') || '{"breaks": 0, "drawings": 0, "words": 0, "pasillo": 0}')
     },
 
     // Modo Compañeros Virtuales (Simulación transparente)
-    simulatedCompanionsEnabled: localStorage.getItem('pb_sim_companions') === 'true',
+    simulatedCompanionsEnabled: localStorage.getItem('pb_sim_companions') !== 'false', // Por defecto activo para experiencia inmediata
     virtualFriends: [
       { id: 'f1', name: 'Sara', color: '#B79CE0', active: true, points: 0 },
       { id: 'f2', name: 'Tomás', color: '#7CC4A4', active: true, points: 0 },
@@ -34,20 +35,20 @@
     draw: {
       mode: 'guess', // 'guess' | 'free'
       topicIndex: 0,
-      customWord: '',
       secretWord: 'GATO',
-      revealedHint: '',
+      hint: 'Mascota peluda de cuatro patas',
       timeLimit: 60, // 60, 30, 90, 0 (infinito)
       timeLeft: 60,
       timerRunning: false,
       timerInterval: null,
+      botGuessInterval: null,
       gameOver: false,
       currentColor: '#3A2E25',
       currentLineWidth: 4,
       drawing: false,
       history: [],
-      players: [], // Nombres de jugadores adicionales en la sesión
-      scores: { 'Tú': 0 },
+      players: [],
+      scores: { 'Tú': 0, 'Sara': 0, 'Tomás': 0, 'Lucía': 0 },
       chat: []
     },
 
@@ -79,6 +80,21 @@
           icebreaker: "¡Totalmente válido! PlayBreak fue diseñado justamente para dar ese espacio de micro-descanso."
         }
       ]
+    },
+
+    // Estado de El Pasillo (Café Virtual - Actividad 4)
+    pasillo: {
+      topic: "«¿Cuál es tu canción o sonido infalible para concentrarte teletrabajando?»",
+      notes: JSON.parse(localStorage.getItem('pb_pasillo_notes') || '[]')
+    },
+
+    // Multijugador WebRTC P2P (PeerJS)
+    p2p: {
+      peer: null,
+      connection: null,
+      isHost: false,
+      roomCode: null,
+      connected: false
     }
   };
 
@@ -96,6 +112,12 @@
     { word: "AVIÓN", hint: "Vuela por los cielos con pasajeros" }
   ];
 
+  // Banco de notas iniciales para El Pasillo
+  const INITIAL_PASILLO_NOTES = [
+    { id: 1, author: "Sara", color: "#B79CE0", text: "¡Lofi hip hop beats de fondo siempre! Me ayuda un montón a escribir código.", time: "Hace 10 min", reactions: { "☕": 3, "👏": 1 } },
+    { id: 2, author: "Tomás", color: "#7CC4A4", text: "Sonido de lluvia en bosque con audífonos. Siento que estoy en una cabaña.", time: "Hace 25 min", reactions: { "☕": 2, "🍪": 4 } }
+  ];
+
   // Preguntas rompehielos para el momento post-partida
   const ICEBREAKER_QUESTIONS = [
     "¿Qué fue lo más divertido o desafiante del dibujo?",
@@ -107,7 +129,7 @@
   ];
 
   // ==========================================
-  // 2. UTILIDADES DOM Y FORMATO
+  // 2. UTILIDADES DOM Y TOAST
   // ==========================================
   const $ = (selector, context = document) => context.querySelector(selector);
   const $$ = (selector, context = document) => [...context.querySelectorAll(selector)];
@@ -137,10 +159,9 @@
   function navigateTo(screenId) {
     if (!$(`#screen-${screenId}`)) screenId = 'mapa';
 
-    // Detener temporizadores activos si salimos de dibujo
+    // Detener temporizadores si salimos de dibujo
     if (State.currentScreen === 'dibujo' && screenId !== 'dibujo') {
-      clearInterval(State.draw.timerInterval);
-      State.draw.timerRunning = false;
+      stopDrawingTimers();
     }
 
     State.currentScreen = screenId;
@@ -162,14 +183,14 @@
 
     window.sounds && window.sounds.playClick();
 
-    // Acciones de ciclo de vida de cada pantalla
+    // Ciclo de vida por pantalla
     if (screenId === 'dibujo') initDrawingScreen();
     if (screenId === 'turnos') renderWordChain();
     if (screenId === 'trivia') initTriviaScreen();
+    if (screenId === 'pasillo') renderPasilloScreen();
     if (screenId === 'fin') renderPostGameScreen();
     if (screenId === 'perfil') renderProfileScreen();
 
-    // Guardar hash en URL sin recargar
     try {
       history.replaceState(null, '', `#${screenId}`);
     } catch (e) {}
@@ -178,8 +199,14 @@
     if (viewport) viewport.scrollTop = 0;
   }
 
+  function stopDrawingTimers() {
+    clearInterval(State.draw.timerInterval);
+    clearInterval(State.draw.botGuessInterval);
+    State.draw.timerRunning = false;
+  }
+
   // ==========================================
-  // 4. MESA DE DIBUJO (CANVAS INTERACTIVO)
+  // 4. MESA DE DIBUJO (CANVAS & BOTS ACTIVOS)
   // ==========================================
   let canvas, ctx;
 
@@ -188,7 +215,6 @@
     if (!canvas) return;
     ctx = canvas.getContext('2d');
 
-    // Adaptar resolución de renderizado
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
     canvas.width = (rect.width || 600) * dpr;
@@ -197,22 +223,24 @@
 
     clearCanvasSurface();
 
-    // Eventos Pointer para soporte universal (Mouse, Stylus, Touch)
     canvas.addEventListener('pointerdown', handlePointerDown);
     canvas.addEventListener('pointermove', handlePointerMove);
     canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('pointercancel', handlePointerUp);
   }
 
-  function clearCanvasSurface() {
+  function clearCanvasSurface(broadcast = true) {
     if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.restore();
     saveCanvasState();
+
+    if (broadcast && State.p2p.connection) {
+      sendPeerMessage({ type: 'clear' });
+    }
   }
 
   function saveCanvasState() {
@@ -226,12 +254,11 @@
       toast('No hay más trazos para deshacer.');
       return;
     }
-    State.draw.history.pop(); // Quitar estado actual
+    State.draw.history.pop();
     const prevState = State.draw.history[State.draw.history.length - 1];
     const img = new Image();
     img.src = prevState;
     img.onload = () => {
-      const dpr = window.devicePixelRatio || 1;
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -254,7 +281,7 @@
     canvas.setPointerCapture(e.pointerId);
     State.draw.drawing = true;
     
-    // Iniciar temporizador al primer trazo si no ha empezado
+    // Iniciar temporizador y el loop de adivinanzas activas de compañeros
     if (!State.draw.timerRunning && State.draw.timeLimit > 0) {
       startTimer();
     }
@@ -269,6 +296,16 @@
     ctx.lineTo(x + 0.5, y);
     ctx.stroke();
 
+    // Broadcast por WebRTC si hay multijugador online conectado
+    if (State.p2p.connection) {
+      sendPeerMessage({
+        type: 'draw_down',
+        x, y,
+        color: State.draw.currentColor,
+        size: State.draw.currentLineWidth
+      });
+    }
+
     window.sounds && window.sounds.playClick();
   }
 
@@ -277,6 +314,10 @@
     const { x, y } = getCanvasCoords(e);
     ctx.lineTo(x, y);
     ctx.stroke();
+
+    if (State.p2p.connection) {
+      sendPeerMessage({ type: 'draw_move', x, y });
+    }
   }
 
   function handlePointerUp() {
@@ -284,6 +325,10 @@
     State.draw.drawing = false;
     ctx.closePath();
     saveCanvasState();
+
+    if (State.p2p.connection) {
+      sendPeerMessage({ type: 'draw_up' });
+    }
   }
 
   function startTimer() {
@@ -292,19 +337,125 @@
     State.draw.timerRunning = true;
     updateTimerDisplay();
 
+    // Iniciar el temporizador regresivo
     State.draw.timerInterval = setInterval(() => {
       State.draw.timeLeft--;
       updateTimerDisplay();
 
       if (State.draw.timeLeft <= 0) {
-        clearInterval(State.draw.timerInterval);
-        State.draw.timerRunning = false;
+        stopDrawingTimers();
         State.draw.gameOver = true;
         window.sounds && window.sounds.playDing();
-        $('#drawStatusMsg').textContent = '¡Se acabó el tiempo! Toca «Terminar ronda» para ver el resumen.';
+        $('#drawStatusMsg').textContent = '¡Se acabó el tiempo! Toca «Terminar ronda y charlar».';
         $('#drawStatusMsg').className = 'feedback-msg error';
       }
     }, 1000);
+
+    // Iniciar el bucle orgánico de adivinanzas de los compañeros mientras dibujas
+    startActiveBotGuessingLoop();
+  }
+
+  function startActiveBotGuessingLoop() {
+    clearInterval(State.draw.botGuessInterval);
+    if (!State.simulatedCompanionsEnabled || State.draw.mode !== 'guess') return;
+
+    let tickCount = 0;
+    // Cada 4 a 6 segundos un compañero virtual hace un intento en el chat
+    State.draw.botGuessInterval = setInterval(() => {
+      if (State.draw.gameOver || !State.draw.timerRunning) {
+        clearInterval(State.draw.botGuessInterval);
+        return;
+      }
+      tickCount++;
+      triggerSimulatedCompanionGuess(tickCount);
+    }, 5000);
+  }
+
+  function triggerSimulatedCompanionGuess(tick = 1) {
+    if (State.draw.gameOver) return;
+
+    const friends = State.virtualFriends;
+    const friend = friends[Math.floor(Math.random() * friends.length)];
+    const word = State.draw.secretWord;
+
+    // Banco de adivinanzas cercanas / simpáticas según la palabra secreta
+    const closeGuesses = {
+      'GATO': ["¿Es un perro?", "¿Un conejo?", "¿Tiene orejas?", "¿Un tigre pequeño?", "¿Un animal?", "¡Parece un minino!"],
+      'PIZZA': ["¿Es un pastel?", "¿Una rueda?", "¿Comida?", "¿Un queso?", "¡Parece una tarta!", "¿Algo horneado?"],
+      'BICICLETA': ["¿Una moto?", "¿Un vehículo?", "¿Tiene dos ruedas?", "¿Un triciclo?", "¡Parece un patinete!"],
+      'GUITARRA': ["¿Un violín?", "¿Un instrumento?", "¿Tiene cuerdas?", "¿Un bajo?", "¡Tiene forma de guitarra!"],
+      'MONTAÑA': ["¿Un triángulo?", "¿Un volcán?", "¿Es naturaleza?", "¿Una colina?", "¡Una pirámide!"],
+      'RELOJ': ["¿Un círculo?", "¿Mide el tiempo?", "¿Un cronómetro?", "¿Es un reloj despertador?"],
+      'CAFÉ': ["¿Una taza?", "¿Té caliente?", "¿Algo para tomar?", "¿Un pocillo?", "¡Huele a café!"],
+      'ÁRBOL': ["¿Una flor?", "¿Una planta?", "¿Naturaleza?", "¿Tiene ramas?", "¡Parece un pino!"],
+      'LUNA': ["¿El sol?", "¿Una esfera?", "¿Una estrella?", "¿La luna en cuarto menguante?"],
+      'AVIÓN': ["¿Un pájaro?", "¿Un helicóptero?", "¿Vuela por el aire?", "¿Un ave?", "¡Tiene alas!"]
+    };
+
+    const guessesList = closeGuesses[word] || ["¿Qué será?", "¿Es un objeto?", "¿Es un animal?", "¡Casi lo tengo!"];
+
+    // En los primeros intentos hacen deducciones; tras 4-5 intentos o si falta poco tiempo, uno de ellos adivina la palabra
+    const shouldWin = tick >= 4 || (State.draw.timeLeft <= 22 && State.draw.timeLeft > 8);
+
+    if (shouldWin) {
+      // ¡El compañero adivina!
+      clearInterval(State.draw.botGuessInterval);
+      postChatMessage(friend.name, `¡Es un ${word}! 🎉`, false);
+      handleGuessSuccess(friend.name, word);
+    } else {
+      const guess = guessesList[Math.floor(Math.random() * guessesList.length)];
+      postChatMessage(friend.name, guess, false);
+      window.sounds && window.sounds.playPop();
+    }
+  }
+
+  function postChatMessage(author, text, isSystem = false) {
+    const chatBox = $('#guessMessages');
+    if (!chatBox) return;
+
+    const msgEl = document.createElement('div');
+    msgEl.className = 'guess-msg';
+
+    if (isSystem) {
+      msgEl.className = 'guess-msg system';
+      msgEl.innerHTML = escapeHtml(text);
+    } else {
+      const isMe = author === State.profile.name;
+      msgEl.innerHTML = `<b style="color:${isMe ? 'var(--accent)' : 'var(--ink)'}">${escapeHtml(author)}:</b> ${escapeHtml(text)}`;
+    }
+
+    chatBox.appendChild(msgEl);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function handleGuessSuccess(winnerName, word) {
+    State.draw.gameOver = true;
+    stopDrawingTimers();
+
+    // Otorgar puntos
+    State.draw.scores[winnerName] = (State.draw.scores[winnerName] || 0) + 10;
+    renderScoreboard();
+
+    // Mensaje en chat
+    const chatBox = $('#guessMessages');
+    const winMsg = document.createElement('div');
+    winMsg.className = 'guess-msg correct';
+    winMsg.innerHTML = `🏆 <b>${escapeHtml(winnerName)}</b> adivinó la palabra: <b>${escapeHtml(word)}</b> (+10 pts)`;
+    chatBox.appendChild(winMsg);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // Celebración visual y sonora
+    triggerConfetti();
+    window.sounds && window.sounds.playSuccess();
+    toast(`¡${winnerName} adivinó la palabra «${word}»!`);
+
+    $('#drawStatusMsg').textContent = `¡Ronda ganada por ${winnerName}! Toca «Cambiar palabra» o «Terminar ronda y charlar».`;
+    $('#drawStatusMsg').className = 'feedback-msg success';
+
+    // Broadcast a compañero P2P si está conectado
+    if (State.p2p.connection) {
+      sendPeerMessage({ type: 'win', winnerName, word });
+    }
   }
 
   function updateTimerDisplay() {
@@ -322,25 +473,25 @@
   }
 
   function initDrawingScreen() {
-    setTimeout(initCanvas, 50);
+    setTimeout(initCanvas, 60);
 
-    // Configurar palabra secreta o modo libre
     if (State.draw.mode === 'guess') {
       const current = WORD_BANK[State.draw.topicIndex % WORD_BANK.length];
       State.draw.secretWord = current.word;
+      State.draw.hint = current.hint;
       $('#drawTopicTag').textContent = `Adivinar: ${current.word.length} letras`;
       $('#drawHintText').textContent = `Pista: ${current.hint}`;
       $('#guessSectionBox').hidden = false;
     } else {
       $('#drawTopicTag').textContent = 'Dibujo Libre';
-      $('#drawHintText').textContent = '¡Dibuja lo que quieras! Sin reglas ni puntuación.';
+      $('#drawHintText').textContent = '¡Dibuja lo que quieras! Sin reglas ni temporizador forzado.';
       $('#guessSectionBox').hidden = true;
     }
 
     State.draw.gameOver = false;
     State.draw.timeLeft = State.draw.timeLimit;
     State.draw.timerRunning = false;
-    clearInterval(State.draw.timerInterval);
+    stopDrawingTimers();
     updateTimerDisplay();
 
     $('#drawStatusMsg').textContent = '';
@@ -354,12 +505,10 @@
 
     let activeList = [{ name: State.profile.name, isMe: true }];
 
-    // Si la simulación de compañeros está activa, agregarlos
     if (State.simulatedCompanionsEnabled) {
       State.virtualFriends.forEach(f => activeList.push({ name: f.name, isMe: false, color: f.color }));
     }
 
-    // Agregar invitados manuales
     State.draw.players.forEach(p => activeList.push({ name: p, isMe: false, manual: true }));
 
     container.innerHTML = activeList.map((p, idx) => `
@@ -375,10 +524,6 @@
     if (!list) return;
 
     let entries = Object.entries(State.draw.scores);
-    if (entries.length === 0) {
-      entries = [['Tú', 0]];
-    }
-
     list.innerHTML = entries.map(([name, pts]) => `
       <div class="scoreboard-item">
         <span>${escapeHtml(name)}</span>
@@ -387,57 +532,22 @@
     `).join('');
   }
 
-  function handleGuessSubmit(guessText) {
+  function handleUserGuessSubmit(guessText) {
     const cleanGuess = guessText.trim().toUpperCase();
     if (!cleanGuess) return;
 
     window.sounds && window.sounds.playPop();
+    postChatMessage(State.profile.name, guessText, false);
 
-    const chatBox = $('#guessMessages');
-    const msgEl = document.createElement('div');
-    msgEl.className = 'guess-msg';
+    // Broadcast guess a P2P
+    if (State.p2p.connection) {
+      sendPeerMessage({ type: 'guess', name: State.profile.name, text: guessText });
+    }
 
     // Verificar si acertó
     if (cleanGuess === State.draw.secretWord.toUpperCase()) {
-      msgEl.className = 'guess-msg correct';
-      msgEl.innerHTML = `🎉 <b>${escapeHtml(State.profile.name)}</b> adivinó la palabra: <b>${State.draw.secretWord}</b>!`;
-      
-      State.draw.scores['Tú'] = (State.draw.scores['Tú'] || 0) + 10;
-      State.profile.stats.drawings++;
-      saveProfileStats();
-
-      renderScoreboard();
-      triggerConfetti();
-      window.sounds && window.sounds.playSuccess();
-      toast('¡Adivinaste la palabra correcta! +10 puntos');
-
-      $('#drawStatusMsg').textContent = '¡Ronda ganada! Toca «Cambiar palabra» o «Terminar ronda».';
-      $('#drawStatusMsg').className = 'feedback-msg success';
-    } else {
-      msgEl.innerHTML = `<b>${escapeHtml(State.profile.name)}:</b> ${escapeHtml(guessText)}`;
+      handleGuessSuccess(State.profile.name, State.draw.secretWord);
     }
-
-    chatBox.appendChild(msgEl);
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    // Si los compañeros virtuales están activos, simular respuestas si no se ha adivinado
-    if (State.simulatedCompanionsEnabled && cleanGuess !== State.draw.secretWord.toUpperCase()) {
-      setTimeout(simulateCompanionGuess, 1200);
-    }
-  }
-
-  function simulateCompanionGuess() {
-    if (State.draw.gameOver) return;
-    const friend = State.virtualFriends[Math.floor(Math.random() * State.virtualFriends.length)];
-    const guesses = ["¿Será un árbol?", "¿Una mesa?", "¿Es comida?", "¿Un coche?", "¡Casi lo tengo!"];
-    const guess = guesses[Math.floor(Math.random() * guesses.length)];
-
-    const chatBox = $('#guessMessages');
-    const msgEl = document.createElement('div');
-    msgEl.className = 'guess-msg';
-    msgEl.innerHTML = `<b>${escapeHtml(friend.name)}:</b> ${guess}`;
-    chatBox.appendChild(msgEl);
-    chatBox.scrollTop = chatBox.scrollHeight;
   }
 
   function downloadCanvasAsPNG() {
@@ -464,7 +574,6 @@
 
     let chain = State.words.chain;
     if (chain.length === 0) {
-      // Si la simulación está activa o es primera vez, dar un ejemplo suave
       if (State.simulatedCompanionsEnabled) {
         chain = INITIAL_CHAIN_WORDS;
         State.words.chain = chain;
@@ -536,19 +645,23 @@
       }
     }
 
-    // Palabra válida
     msgEl.textContent = '¡Palabra encadenada con éxito!';
     msgEl.className = 'feedback-msg success';
 
-    State.words.chain.push({
+    const newEntry = {
       word: word.trim(),
       author: State.profile.name,
       time: 'Hace un momento'
-    });
+    };
 
+    State.words.chain.push(newEntry);
     localStorage.setItem('pb_word_chain', JSON.stringify(State.words.chain));
     State.profile.stats.words++;
     saveProfileStats();
+
+    if (State.p2p.connection) {
+      sendPeerMessage({ type: 'word_chain', entry: newEntry });
+    }
 
     window.sounds && window.sounds.playSuccess();
     triggerConfetti();
@@ -558,8 +671,58 @@
     renderWordChain();
   }
 
+  function simulateCompanionWord() {
+    if (State.words.chain.length === 0) {
+      handleWordSubmit("descanso");
+      return;
+    }
+
+    const lastWord = State.words.chain[State.words.chain.length - 1].word.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const requiredChar = lastWord.charAt(lastWord.length - 1);
+
+    const dictionary = {
+      'a': ["amabilidad", "almuerzo", "armonía", "abrazo"],
+      'b': ["bienestar", "buena onda", "brindis"],
+      'c': ["cafecito", "compañerismo", "creatividad"],
+      'd': ["desconexión", "diversión", "diálogo"],
+      'e': ["energía", "entusiasmo", "empatía"],
+      'f': ["felicidad", "frescura", "fuerza"],
+      'g': ["gratitud", "ganas", "gusto"],
+      'h': ["humor", "harmonia", "horizonte"],
+      'i': ["inspiración", "ilusión", "ideas"],
+      'j': ["juego", "jornada", "júbilo"],
+      'l': ["luz", "libertad", "lectura"],
+      'm': ["música", "motivación", "mañana"],
+      'n': ["naturaleza", "novedad", "nube"],
+      'o': ["optimismo", "oxígeno", "organización"],
+      'p': ["pausa", "paciencia", "paz"],
+      'r': ["risa", "recarga", "respiro"],
+      's': ["sonrisa", "salud", "serenidad"],
+      't': ["tranquilidad", "té", "tiempo"],
+      'u': ["unión", "universo"],
+      'v': ["vitalidad", "vida", "viaje"],
+      'z': ["zen", "zona libre"]
+    };
+
+    const options = dictionary[requiredChar] || ["armonía", "pausa", "sonrisa"];
+    const chosenWord = options[Math.floor(Math.random() * options.length)];
+    const friend = State.virtualFriends[Math.floor(Math.random() * State.virtualFriends.length)];
+
+    const simulatedEntry = {
+      word: chosenWord,
+      author: friend.name,
+      time: 'Hace un instante'
+    };
+
+    State.words.chain.push(simulatedEntry);
+    localStorage.setItem('pb_word_chain', JSON.stringify(State.words.chain));
+    window.sounds && window.sounds.playPop();
+    toast(`🎬 ${friend.name} aportó «${chosenWord}» a la cadena.`);
+    renderWordChain();
+  }
+
   // ==========================================
-  // 6. TRIVIA RELÁMPAGO (MINIJUEGO SUGERIDO R5)
+  // 6. TRIVIA RELÁMPAGO (MINIJUEGO 3)
   // ==========================================
   function initTriviaScreen() {
     State.trivia.currentQuestionIndex = 0;
@@ -603,7 +766,7 @@
     setTimeout(() => {
       State.trivia.currentQuestionIndex++;
       renderTriviaQuestion();
-    }, 2200);
+    }, 2000);
   }
 
   function renderTriviaFinish() {
@@ -623,13 +786,298 @@
   }
 
   // ==========================================
-  // 7. MOMENTO POST-PARTIDA ("LA CAFETERÍA")
+  // 7. EL PASILLO · CAFÉ VIRTUAL (ACTIVIDAD 4)
+  // ==========================================
+  function renderPasilloScreen() {
+    if (State.pasillo.notes.length === 0) {
+      State.pasillo.notes = INITIAL_PASILLO_NOTES;
+      localStorage.setItem('pb_pasillo_notes', JSON.stringify(State.pasillo.notes));
+    }
+
+    const grid = $('#pasilloNotesGrid');
+    if (!grid) return;
+
+    grid.innerHTML = State.pasillo.notes.map((note) => {
+      const isMe = note.author === State.profile.name;
+      return `
+        <article class="pasillo-note ${isMe ? 'user' : ''}" data-note-id="${note.id}">
+          <div class="pasillo-note-author">
+            <div class="avatar sm" style="width:26px;height:26px;--c:${note.color || '#C98B5B'}">
+              <span class="avatar-smile"></span>
+            </div>
+            <span>${escapeHtml(note.author)}</span>
+          </div>
+          <p class="pasillo-note-text">${escapeHtml(note.text)}</p>
+          <div class="pasillo-note-footer">
+            <span>${escapeHtml(note.time || 'Reciente')}</span>
+            <div class="pasillo-reactions">
+              <button type="button" class="pasillo-react-btn" data-react="☕" data-note="${note.id}">☕ ${note.reactions?.['☕'] || 0}</button>
+              <button type="button" class="pasillo-react-btn" data-react="🍪" data-note="${note.id}">🍪 ${note.reactions?.['🍪'] || 0}</button>
+              <button type="button" class="pasillo-react-btn" data-react="👏" data-note="${note.id}">👏 ${note.reactions?.['👏'] || 0}</button>
+            </div>
+          </div>
+        </article>
+      `;
+    }).join('');
+
+    grid.scrollTop = grid.scrollHeight;
+  }
+
+  function handlePasilloSubmit(text) {
+    const clean = text.trim();
+    if (!clean) return;
+
+    const newNote = {
+      id: Date.now(),
+      author: State.profile.name,
+      color: State.profile.color,
+      text: clean,
+      time: 'Hace un instante',
+      reactions: { '☕': 1, '🍪': 0, '👏': 0 }
+    };
+
+    State.pasillo.notes.push(newNote);
+    localStorage.setItem('pb_pasillo_notes', JSON.stringify(State.pasillo.notes));
+    State.profile.stats.pasillo = (State.profile.stats.pasillo || 0) + 1;
+    saveProfileStats();
+
+    if (State.p2p.connection) {
+      sendPeerMessage({ type: 'pasillo_note', note: newNote });
+    }
+
+    window.sounds && window.sounds.playPop();
+    toast('¡Dejaste tu nota en El Pasillo!');
+    $('#pasilloInput').value = '';
+    renderPasilloScreen();
+  }
+
+  function handlePasilloReaction(noteId, emoji) {
+    const note = State.pasillo.notes.find(n => String(n.id) === String(noteId));
+    if (!note) return;
+    if (!note.reactions) note.reactions = {};
+    note.reactions[emoji] = (note.reactions[emoji] || 0) + 1;
+    localStorage.setItem('pb_pasillo_notes', JSON.stringify(State.pasillo.notes));
+    window.sounds && window.sounds.playClick();
+    renderPasilloScreen();
+  }
+
+  function simulateCompanionPasilloMessage() {
+    const messages = [
+      "¡Qué buena pausa! Yo voto por un café con canela hoy ☕",
+      "Terminé un bug que me tenía loco toda la mañana, ¡por fin descanso!",
+      "Les recomiendo la playlist de Synthwave Chill para programar concentrado.",
+      "¿Alguien más aquí toma agua con rodajas de limón entre tareas?"
+    ];
+    const friend = State.virtualFriends[Math.floor(Math.random() * State.virtualFriends.length)];
+    const text = messages[Math.floor(Math.random() * messages.length)];
+
+    const note = {
+      id: Date.now(),
+      author: friend.name,
+      color: friend.color,
+      text: text,
+      time: 'Hace un momento',
+      reactions: { '☕': 2, '🍪': 1, '👏': 3 }
+    };
+
+    State.pasillo.notes.push(note);
+    localStorage.setItem('pb_pasillo_notes', JSON.stringify(State.pasillo.notes));
+    window.sounds && window.sounds.playPop();
+    toast(`🎬 ${friend.name} dejó un mensaje en El Pasillo.`);
+    renderPasilloScreen();
+  }
+
+  // ==========================================
+  // 8. MULTIJUGADOR REAL P2P WEBRTC (PEERJS)
+  // ==========================================
+  function initPeerJS() {
+    if (typeof Peer === 'undefined') {
+      console.warn('PeerJS library not loaded, running in local/fallback mode');
+      return;
+    }
+
+    // Comprobar si la URL trae un parámetro de sala: ?sala=XXXX
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomParam = urlParams.get('sala');
+    if (roomParam) {
+      setTimeout(() => joinPeerRoom(roomParam.toUpperCase()), 500);
+    }
+  }
+
+  function createPeerRoom() {
+    if (typeof Peer === 'undefined') {
+      toast('PeerJS no está disponible en este momento. Usando simulación local.');
+      return;
+    }
+
+    const code = Math.floor(1000 + Math.random() * 9000);
+    const peerId = `playbreak-room-${code}`;
+    State.p2p.roomCode = code;
+    State.p2p.isHost = true;
+
+    try {
+      State.p2p.peer = new Peer(peerId, { debug: 1 });
+
+      State.p2p.peer.on('open', (id) => {
+        updateP2PStatus('waiting', `Sala creada: SALA-${code} (Esperando compañero)`);
+        
+        // Actualizar el enlace para compartir en el modal
+        const shareInput = $('#shareRoomInput');
+        if (shareInput) {
+          const baseUrl = window.location.origin + window.location.pathname;
+          shareInput.value = `${baseUrl}?sala=${code}`;
+        }
+        $('#shareRoomDialog')?.showModal();
+        toast(`Sala online creada: SALA-${code}. ¡Comparte el enlace!`);
+      });
+
+      State.p2p.peer.on('connection', (conn) => {
+        setupPeerConnection(conn);
+        toast(`¡Un compañero se unió a tu sala online!`);
+      });
+
+      State.p2p.peer.on('error', (err) => {
+        console.error('Peer error:', err);
+        updateP2PStatus('solo', 'Modo Solitario');
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function joinPeerRoom(code) {
+    if (typeof Peer === 'undefined') return;
+    const cleanCode = code.replace(/[^0-9]/g, '');
+    if (!cleanCode) {
+      toast('Introduce un código de 4 números válido.');
+      return;
+    }
+
+    const targetPeerId = `playbreak-room-${cleanCode}`;
+    State.p2p.roomCode = cleanCode;
+    State.p2p.isHost = false;
+
+    updateP2PStatus('waiting', `Conectando a SALA-${cleanCode}...`);
+
+    try {
+      State.p2p.peer = new Peer({ debug: 1 });
+      State.p2p.peer.on('open', () => {
+        const conn = State.p2p.peer.connect(targetPeerId);
+        setupPeerConnection(conn);
+      });
+      State.p2p.peer.on('error', (err) => {
+        updateP2PStatus('solo', 'No se encontró la sala');
+        toast('No se pudo conectar a la sala. Verifica el código.');
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function setupPeerConnection(conn) {
+    State.p2p.connection = conn;
+
+    conn.on('open', () => {
+      State.p2p.connected = true;
+      updateP2PStatus('connected', `🟢 Conectado en vivo (SALA-${State.p2p.roomCode})`);
+      window.sounds && window.sounds.playSuccess();
+      toast('¡Conexión P2P en tiempo real establecida!');
+
+      // Enviar saludo
+      conn.send({ type: 'hello', name: State.profile.name });
+    });
+
+    conn.on('data', (data) => {
+      handleRemotePeerData(data);
+    });
+
+    conn.on('close', () => {
+      State.p2p.connected = false;
+      updateP2PStatus('solo', 'Compañero desconectado');
+      toast('El compañero se desconectó de la sala.');
+    });
+  }
+
+  function sendPeerMessage(msg) {
+    if (State.p2p.connection && State.p2p.connected) {
+      try {
+        State.p2p.connection.send(msg);
+      } catch (e) {}
+    }
+  }
+
+  function handleRemotePeerData(data) {
+    if (!data) return;
+
+    switch (data.type) {
+      case 'draw_down':
+        if (!ctx) return;
+        ctx.beginPath();
+        ctx.moveTo(data.x, data.y);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = data.color || '#3A2E25';
+        ctx.lineWidth = data.size || 4;
+        ctx.lineTo(data.x + 0.5, data.y);
+        ctx.stroke();
+        break;
+
+      case 'draw_move':
+        if (!ctx) return;
+        ctx.lineTo(data.x, data.y);
+        ctx.stroke();
+        break;
+
+      case 'draw_up':
+        if (!ctx) return;
+        ctx.closePath();
+        break;
+
+      case 'clear':
+        clearCanvasSurface(false);
+        break;
+
+      case 'guess':
+        postChatMessage(data.name, data.text, false);
+        window.sounds && window.sounds.playPop();
+        break;
+
+      case 'win':
+        handleGuessSuccess(data.winnerName, data.word);
+        break;
+
+      case 'word_chain':
+        State.words.chain.push(data.entry);
+        localStorage.setItem('pb_word_chain', JSON.stringify(State.words.chain));
+        renderWordChain();
+        window.sounds && window.sounds.playDing();
+        break;
+
+      case 'pasillo_note':
+        State.pasillo.notes.push(data.note);
+        localStorage.setItem('pb_pasillo_notes', JSON.stringify(State.pasillo.notes));
+        renderPasilloScreen();
+        window.sounds && window.sounds.playDing();
+        break;
+    }
+  }
+
+  function updateP2PStatus(status, text) {
+    const el = $('#p2pStatusLabel');
+    const textEl = $('#p2pStatusText');
+    if (!el || !textEl) return;
+
+    el.className = `p2p-status ${status}`;
+    textEl.textContent = text;
+  }
+
+  // ==========================================
+  // 9. MOMENTO POST-PARTIDA ("LA CAFETERÍA")
   // ==========================================
   function renderPostGameScreen() {
     State.profile.stats.breaks++;
     saveProfileStats();
 
-    // Avatares de los que jugaron
     const avatarsContainer = $('#postgameAvatars');
     let participants = [{ name: State.profile.name, color: State.profile.color }];
 
@@ -657,37 +1105,31 @@
   }
 
   // ==========================================
-  // 8. PERFIL Y PERSONALIZACIÓN ("TU RINCÓN")
+  // 10. PERFIL Y PERSONALIZACIÓN ("TU RINCÓN")
   // ==========================================
   const SWATCH_COLORS = ['#C98B5B', '#D96951', '#5B9BC4', '#5F9E82', '#E5A338', '#9B653C', '#7B68EE', '#E06D8C'];
   const AVAILABLE_TAGS = ['Cine', 'Series', 'Videojuegos', 'Música', 'Senderismo', 'Cocina', 'Lectura', 'Fútbol', 'Café', 'Mascotas', 'Fotografía', 'Viajes'];
 
   function renderProfileScreen() {
     $('#profileNameInput').value = State.profile.name;
-    
-    // Avatar grande
     updateProfileAvatarPreview();
 
-    // Paleta de colores
     const swatches = $('#colorSwatches');
     swatches.innerHTML = SWATCH_COLORS.map(c => `
       <button type="button" class="swatch-btn ${c === State.profile.color ? 'active' : ''}" 
         style="--c:${c}" data-swatch="${c}" aria-label="Color ${c}"></button>
     `).join('');
 
-    // Nube de tags de intereses
     const tagsCloud = $('#profileTagsCloud');
     tagsCloud.innerHTML = AVAILABLE_TAGS.map(t => {
       const active = State.profile.tags.includes(t);
       return `<button type="button" class="tag-btn" data-tag="${t}" aria-pressed="${active}">${escapeHtml(t)}</button>`;
     }).join('');
 
-    // Modo preferido
     $$('input[name="prefModo"]').forEach(radio => {
       radio.checked = radio.value === State.profile.mode;
     });
 
-    // Estadísticas
     $('#statBreaks').textContent = State.profile.stats.breaks;
     $('#statDrawings').textContent = State.profile.stats.drawings;
     $('#statWords').textContent = State.profile.stats.words;
@@ -695,17 +1137,11 @@
 
   function updateProfileAvatarPreview() {
     const preview = $('#profileAvatarPreview');
-    if (preview) {
-      preview.style.setProperty('--c', State.profile.color);
-    }
+    if (preview) preview.style.setProperty('--c', State.profile.color);
     const sideAv = $('#sidebarUserAvatar');
-    if (sideAv) {
-      sideAv.style.setProperty('--c', State.profile.color);
-    }
+    if (sideAv) sideAv.style.setProperty('--c', State.profile.color);
     const sideName = $('#sidebarUserName');
-    if (sideName) {
-      sideName.textContent = State.profile.name;
-    }
+    if (sideName) sideName.textContent = State.profile.name;
   }
 
   function saveProfileStats() {
@@ -730,22 +1166,22 @@
   }
 
   // ==========================================
-  // 9. ANIMACIÓN DE CONFETI NATIVO (CANVAS)
+  // 11. CONFETI NATIVO (CANVAS)
   // ==========================================
   function triggerConfetti() {
-    const canvas = $('#confettiCanvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const cvs = $('#confettiCanvas');
+    if (!cvs) return;
+    const c = cvs.getContext('2d');
+    cvs.width = window.innerWidth;
+    cvs.height = window.innerHeight;
 
     const colors = ['#7A4E2D', '#D96951', '#5B9BC4', '#5F9E82', '#E5A338', '#FFFFFF'];
     const particles = [];
 
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 75; i++) {
       particles.push({
-        x: canvas.width / 2 + (Math.random() - 0.5) * 200,
-        y: canvas.height / 2 + (Math.random() - 0.5) * 100,
+        x: cvs.width / 2 + (Math.random() - 0.5) * 200,
+        y: cvs.height / 2 + (Math.random() - 0.5) * 100,
         vx: (Math.random() - 0.5) * 12,
         vy: -Math.random() * 10 - 4,
         size: Math.random() * 8 + 4,
@@ -758,38 +1194,37 @@
 
     let frames = 0;
     function animate() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      c.clearRect(0, 0, cvs.width, cvs.height);
       particles.forEach(p => {
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.3; // Gravedad
+        p.vy += 0.3;
         p.rotation += p.vr;
         p.opacity -= 0.012;
 
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate((p.rotation * Math.PI) / 180);
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = Math.max(p.opacity, 0);
-        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-        ctx.restore();
+        c.save();
+        c.translate(p.x, p.y);
+        c.rotate((p.rotation * Math.PI) / 180);
+        c.fillStyle = p.color;
+        c.globalAlpha = Math.max(p.opacity, 0);
+        c.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+        c.restore();
       });
 
       frames++;
       if (frames < 90) {
         requestAnimationFrame(animate);
       } else {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        c.clearRect(0, 0, cvs.width, cvs.height);
       }
     }
     animate();
   }
 
   // ==========================================
-  // 10. MANEJADORES DE EVENTOS GLOBALES
+  // 12. MANEJADORES DE EVENTOS
   // ==========================================
   function setupEventListeners() {
-    // Delegación para navegación
     document.addEventListener('click', (e) => {
       const goBtn = e.target.closest('[data-go]');
       if (goBtn) {
@@ -797,14 +1232,19 @@
         return;
       }
 
-      // Acciones específicas
       const actBtn = e.target.closest('[data-act]');
       if (actBtn) {
         handleAction(actBtn.dataset.act, actBtn);
         return;
       }
 
-      // Selección de colores en dibujo
+      // Reacciones en El Pasillo
+      const reactBtn = e.target.closest('[data-react]');
+      if (reactBtn) {
+        handlePasilloReaction(reactBtn.dataset.note, reactBtn.dataset.react);
+        return;
+      }
+
       const colBtn = e.target.closest('[data-draw-color]');
       if (colBtn) {
         State.draw.currentColor = colBtn.dataset.drawColor;
@@ -813,7 +1253,6 @@
         return;
       }
 
-      // Tamaño de pincel
       const brushBtn = e.target.closest('[data-brush-size]');
       if (brushBtn) {
         State.draw.currentLineWidth = parseInt(brushBtn.dataset.brushSize, 10);
@@ -822,7 +1261,6 @@
         return;
       }
 
-      // Tags de perfil
       const tagBtn = e.target.closest('[data-tag]');
       if (tagBtn) {
         const tag = tagBtn.dataset.tag;
@@ -838,7 +1276,6 @@
         return;
       }
 
-      // Swatches de perfil
       const swatchBtn = e.target.closest('[data-swatch]');
       if (swatchBtn) {
         State.profile.color = swatchBtn.dataset.swatch;
@@ -848,7 +1285,6 @@
         return;
       }
 
-      // Opciones de trivia
       const triviaOpt = e.target.closest('[data-trivia-idx]');
       if (triviaOpt) {
         handleTriviaSelect(parseInt(triviaOpt.dataset.triviaIdx, 10));
@@ -856,22 +1292,25 @@
       }
     });
 
-    // Formulario de Adivinanza en Dibujo
     $('#guessForm')?.addEventListener('submit', (e) => {
       e.preventDefault();
       const input = $('#guessInput');
-      handleGuessSubmit(input.value);
+      handleUserGuessSubmit(input.value);
       input.value = '';
     });
 
-    // Formulario de Rincón de Palabras
     $('#wordForm')?.addEventListener('submit', (e) => {
       e.preventDefault();
       const input = $('#wordInput');
       handleWordSubmit(input.value);
     });
 
-    // Formulario para invitar / agregar jugador manual en dibujo
+    $('#pasilloForm')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = $('#pasilloInput');
+      handlePasilloSubmit(input.value);
+    });
+
     $('#addPlayerForm')?.addEventListener('submit', (e) => {
       e.preventDefault();
       const input = $('#addPlayerInput');
@@ -889,7 +1328,6 @@
       toast(`Jugador «${name}» agregado.`);
     });
 
-    // Toggle de Compañeros Virtuales (Simulación transparente)
     $('#toggleSimulatedCompanions')?.addEventListener('change', (e) => {
       State.simulatedCompanionsEnabled = e.target.checked;
       localStorage.setItem('pb_sim_companions', State.simulatedCompanionsEnabled);
@@ -897,10 +1335,9 @@
       renderScoreboard();
       toast(State.simulatedCompanionsEnabled ? 
         'Compañeros de prueba activados (Sara, Tomás, Lucía).' : 
-        'Modo solo tú activado. La sala empieza limpia.');
+        'Modo solo tú activado.');
     });
 
-    // Selector de tema (Dark / Light)
     $('#themeToggleBtn')?.addEventListener('click', () => {
       State.theme = State.theme === 'light' ? 'dark' : 'light';
       document.documentElement.setAttribute('data-theme', State.theme);
@@ -909,7 +1346,6 @@
       toast(State.theme === 'light' ? 'Modo Cálido activado.' : 'Modo Café Nocturno activado.');
     });
 
-    // Toggle de Audio Mute
     $('#soundToggleBtn')?.addEventListener('click', () => {
       const isMuted = window.sounds.toggleMute();
       $('#soundToggleBtn').innerHTML = isMuted ? '🔇 Silenciado' : '🔔 Sonido ON';
@@ -920,7 +1356,7 @@
   function handleAction(action, btn) {
     switch (action) {
       case 'clear-canvas':
-        clearCanvasSurface();
+        clearCanvasSurface(true);
         window.sounds && window.sounds.playPop();
         toast('Lienzo limpio.');
         break;
@@ -944,7 +1380,7 @@
         State.draw.mode = State.draw.mode === 'guess' ? 'free' : 'guess';
         btn.textContent = State.draw.mode === 'guess' ? 'Modo: Adivinar' : 'Modo: Dibujo Libre';
         initDrawingScreen();
-        toast(State.draw.mode === 'guess' ? 'Cambiado a juego de adivinar con palabra secreta.' : 'Cambiado a dibujo libre.');
+        toast(State.draw.mode === 'guess' ? 'Modo adivinar con palabra secreta.' : 'Modo dibujo libre sin puntuación.');
         break;
 
       case 'toggle-timer-limit':
@@ -954,6 +1390,34 @@
         btn.textContent = State.draw.timeLimit === 0 ? 'Tiempo: Libre' : `Tiempo: ${State.draw.timeLimit} s`;
         initDrawingScreen();
         toast(`Tiempo límite: ${State.draw.timeLimit === 0 ? 'Sin límite' : State.draw.timeLimit + ' segundos'}.`);
+        break;
+
+      case 'force-bot-guess':
+        triggerSimulatedCompanionGuess(4); // Forzar intento
+        break;
+
+      case 'create-room':
+        createPeerRoom();
+        break;
+
+      case 'prompt-join-room':
+        $('#joinRoomDialog')?.showModal();
+        break;
+
+      case 'confirm-join-room':
+        const code = $('#joinRoomCodeInput').value.trim();
+        if (code) {
+          joinPeerRoom(code);
+          $('#joinRoomDialog')?.close();
+        }
+        break;
+
+      case 'simulate-word':
+        simulateCompanionWord();
+        break;
+
+      case 'simulate-pasillo-msg':
+        simulateCompanionPasilloMessage();
         break;
 
       case 'save-profile':
@@ -966,19 +1430,18 @@
         break;
 
       case 'ghost-exit':
-        // Salir sin avisar con mensaje tranquilizador
         navigateTo('mapa');
         toast('🌿 Saliste de la sala en silencio. Nadie recibió notificación.');
         break;
 
       case 'share-room':
-        const shareDialog = $('#shareRoomDialog');
-        if (shareDialog) shareDialog.showModal();
+        $('#shareRoomDialog')?.showModal();
         break;
 
       case 'copy-invite-link':
-        navigator.clipboard?.writeText(window.location.href);
-        toast('Enlace copiado. Compártelo con quien quieras.');
+        const link = $('#shareRoomInput')?.value || window.location.href;
+        navigator.clipboard?.writeText(link);
+        toast('Enlace copiado al portapapeles.');
         $('#shareRoomDialog')?.close();
         break;
 
@@ -999,32 +1462,23 @@
   }
 
   // ==========================================
-  // 11. INICIALIZACIÓN AL CARGAR LA PÁGINA
+  // 13. INICIALIZACIÓN
   // ==========================================
   function initApp() {
-    // Aplicar tema guardado
     document.documentElement.setAttribute('data-theme', State.theme);
     const themeBtn = $('#themeToggleBtn');
-    if (themeBtn) {
-      themeBtn.innerHTML = State.theme === 'light' ? '🌙 Modo Noche' : '☀️ Modo Cálido';
-    }
+    if (themeBtn) themeBtn.innerHTML = State.theme === 'light' ? '🌙 Modo Noche' : '☀️ Modo Cálido';
 
-    // Estado del botón de audio
     const soundBtn = $('#soundToggleBtn');
-    if (soundBtn && window.sounds) {
-      soundBtn.innerHTML = window.sounds.isMuted() ? '🔇 Silenciado' : '🔔 Sonido ON';
-    }
+    if (soundBtn && window.sounds) soundBtn.innerHTML = window.sounds.isMuted() ? '🔇 Silenciado' : '🔔 Sonido ON';
 
-    // Toggle de simulación de compañeros
     const simToggle = $('#toggleSimulatedCompanions');
-    if (simToggle) {
-      simToggle.checked = State.simulatedCompanionsEnabled;
-    }
+    if (simToggle) simToggle.checked = State.simulatedCompanionsEnabled;
 
     updateProfileAvatarPreview();
     setupEventListeners();
+    initPeerJS();
 
-    // Navegar según hash de la URL o ir a la sala
     const initialHash = (location.hash || '').replace('#', '');
     navigateTo(initialHash || 'mapa');
   }

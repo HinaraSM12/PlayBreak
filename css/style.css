@@ -1530,3 +1530,213 @@ dialog::backdrop {
     scroll-behavior: auto !important;
   }
 }
+
+/* ==========================================================================
+   Nuevas Adiciones: Multijugador Real (WebRTC), Guías y El Pasillo (Café Virtual)
+   ========================================================================== */
+.room-card.chat .room-icon-badge {
+  background: var(--sun-soft);
+  border-color: var(--sun);
+}
+.room-tag.chill {
+  background: var(--sun-soft);
+  color: #8A4F12;
+}
+
+/* Barra de Multijugador Real P2P */
+.multiplayer-bar {
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: var(--r2);
+  padding: 8px 14px;
+  margin-bottom: var(--s3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  flex-wrap: wrap;
+  box-shadow: var(--shadow-sm);
+}
+
+.p2p-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.p2p-status .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.p2p-status.connected { color: var(--ok); }
+.p2p-status.connected .dot { background: var(--ok); }
+.p2p-status.waiting { color: #8A5D12; }
+.p2p-status.waiting .dot { background: var(--sun); animation: pulse 1.2s infinite; }
+.p2p-status.solo { color: var(--soft); }
+.p2p-status.solo .dot { background: var(--line-strong); }
+
+.room-code-badge {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 800;
+  background: var(--sand-light);
+  border: 1px solid var(--line-strong);
+  padding: 2px 8px;
+  border-radius: var(--r1);
+  letter-spacing: 0.05em;
+}
+
+/* Guías de Actividad Plegables */
+.activity-guide {
+  background: var(--panel-subtle);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r2);
+  padding: 8px 14px;
+  margin-bottom: var(--s3);
+  font-size: 13px;
+}
+
+.activity-guide summary {
+  font-weight: 800;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+}
+
+.activity-guide summary::-webkit-details-marker {
+  display: none;
+}
+
+.activity-guide .guide-content {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  line-height: 1.45;
+  color: var(--soft);
+}
+
+.activity-guide .guide-content ol {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+/* El Pasillo / Café Virtual (Actividad 4) */
+.pasillo-board {
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: var(--r3);
+  padding: var(--s4);
+  box-shadow: var(--shadow-tactile);
+  display: flex;
+  flex-direction: column;
+}
+
+.pasillo-topic-card {
+  background: var(--sun-soft);
+  border: 2px solid var(--sun);
+  border-radius: var(--r2);
+  padding: var(--s3) var(--s4);
+  margin-bottom: var(--s3);
+}
+
+.pasillo-notes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.pasillo-note {
+  background: var(--bg);
+  border: 2px solid var(--line);
+  border-radius: var(--r2);
+  padding: var(--s3);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 3px 0 var(--line);
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.pasillo-note:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+.pasillo-note.user {
+  background: var(--panel-subtle);
+  border-color: var(--accent);
+}
+
+.pasillo-note-author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.pasillo-note-text {
+  font-size: 14px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.pasillo-note-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
+  font-size: 11.5px;
+  color: var(--soft);
+}
+
+.pasillo-reactions {
+  display: flex;
+  gap: 4px;
+}
+
+.pasillo-react-btn {
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  background: var(--sand-light);
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.pasillo-react-btn:hover {
+  transform: scale(1.1);
+  background: var(--sand);
+}
+
+.pasillo-input-bar {
+  display: flex;
+  gap: var(--s2);
+  margin-top: var(--s2);
+  align-items: center;
+}
+
+.pasillo-input-bar input {
+  flex: 1;
+  padding: 10px 16px;
+  border: 2px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--bg);
+}

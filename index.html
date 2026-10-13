@@ -7,6 +7,8 @@
   <meta name="description" content="PlayBreak es un espacio lúdico de baja fricción para equipos remotos e híbridos que reduce la fatiga y el aislamiento con micro-pausas voluntarias.">
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☕</text></svg>">
+  <!-- PeerJS para Multijugador Real P2P WebRTC sin backend -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
 
@@ -18,7 +20,7 @@
       <div class="brand">
         <div class="brand-icon" aria-hidden="true">☕</div>
         <div class="brand-title">PlayBreak</div>
-        <span class="brand-badge">v3.5</span>
+        <span class="brand-badge">v3.8</span>
       </div>
 
       <div class="nav-links">
@@ -39,6 +41,10 @@
         <button type="button" class="nav-btn" data-go="trivia" id="nav-trivia">
           <span class="icon">⚡</span>
           <span class="text">Trivia Relámpago</span>
+        </button>
+        <button type="button" class="nav-btn" data-go="pasillo" id="nav-pasillo">
+          <span class="icon">💬</span>
+          <span class="text">El Pasillo (Café)</span>
         </button>
         <button type="button" class="nav-btn" data-go="perfil" id="nav-perfil">
           <span class="icon">👤</span>
@@ -73,8 +79,9 @@
           <button type="button" class="proto-pill" data-go="dibujo">2 · Dibujo</button>
           <button type="button" class="proto-pill" data-go="turnos">3 · Palabras</button>
           <button type="button" class="proto-pill" data-go="trivia">4 · Trivia</button>
-          <button type="button" class="proto-pill" data-go="fin">5 · Cafetería</button>
-          <button type="button" class="proto-pill" data-go="perfil">6 · Perfil</button>
+          <button type="button" class="proto-pill" data-go="pasillo">5 · El Pasillo</button>
+          <button type="button" class="proto-pill" data-go="fin">6 · Cafetería</button>
+          <button type="button" class="proto-pill" data-go="perfil">7 · Perfil</button>
         </div>
 
         <div class="toolbar-controls">
@@ -95,14 +102,14 @@
       <div class="viewport">
 
         <!-- ========================================================
-             PANTALLA 1: LA SALA DE DESCANSO (THE HUB)
+             PANTALLA 1: LA SALA DE DESCANSO (THE HUB) - 4 ACTIVIDADES
              ======================================================== -->
         <section class="screen-view active" id="screen-mapa" aria-labelledby="heading-mapa">
           <div class="page-col">
             <div class="header-banner">
               <div>
                 <h1 id="heading-mapa">La Sala de Descanso</h1>
-                <p class="subtitle">Tómate 5 minutos. Elige cómo quieres despejar la mente hoy.</p>
+                <p class="subtitle">Tómate 5 minutos. Elige cómo quieres despejar la mente hoy con 4 actividades.</p>
               </div>
               <span class="status-pill">
                 <span class="dot"></span>
@@ -110,7 +117,7 @@
               </span>
             </div>
 
-            <!-- Grilla de Rincones Lúdicos -->
+            <!-- Grilla de las 4 Actividades Lúdicas -->
             <div class="rooms-grid">
               
               <!-- Rincón 1: Mesa de Dibujo -->
@@ -147,11 +154,25 @@
                 <span class="room-tag quick">Rompehielos Rápido</span>
                 <h2>Trivia Relámpago</h2>
                 <p style="color:var(--soft);font-size:14px">
-                  3 preguntas ligeras sobre gustos de café, hábitos de descanso y teletrabajo.
+                  3 preguntas ligeras sobre gustos de café, hábitos de descanso y anécdotas de teletrabajo.
                 </p>
                 <div class="room-footer">
                   <span style="font-size:12.5px;color:var(--soft);font-weight:700">Duración: 45 segundos</span>
                   <button type="button" class="btn sm alt" data-go="trivia">Jugar trivia</button>
+                </div>
+              </article>
+
+              <!-- Rincón 4: El Pasillo (Café Virtual) -->
+              <article class="room-card chat">
+                <div class="room-icon-badge">💬</div>
+                <span class="room-tag chill">Charla Informal · Baja Fricción</span>
+                <h2>El Pasillo (Café Virtual)</h2>
+                <p style="color:var(--soft);font-size:14px">
+                  Encuentros espontáneos junto a la máquina de café. Comparte una anécdota, responde la pregunta del día o reacciona con emojis.
+                </p>
+                <div class="room-footer">
+                  <span style="font-size:12.5px;color:var(--soft);font-weight:700">Chat relajado</span>
+                  <button type="button" class="btn sm light" data-go="pasillo">Entrar al café</button>
                 </div>
               </article>
 
@@ -162,32 +183,32 @@
               <div class="companion-toggle-text">
                 <h4>🧪 Modo de Demostración & Compañeros Virtuales</h4>
                 <p>
-                  Por defecto la sala empieza limpia (solo estás tú). Si estás probando la app a solas, activa los compañeros simulados (Sara, Tomás, Lucía) para ver cómo funciona el multijugador.
+                  Por defecto la sala empieza limpia (solo estás tú). Si estás probando la app a solas, activa los compañeros simulados (Sara, Tomás, Lucía) para ver cómo funciona el multijugador y verlos adivinar automáticamente en vivo.
                 </p>
               </div>
               <label style="display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer">
                 <input type="checkbox" id="toggleSimulatedCompanions" style="width:18px;height:18px;accent-color:var(--accent)">
-                <span>Activar compañeros de prueba</span>
+                <span>Activar compañeros de prueba (Sara, Tomás, Lucía)</span>
               </label>
             </div>
 
             <div class="actions-row center" style="margin-top:var(--s4)">
               <button type="button" class="btn alt sm" data-act="share-room">
-                🔗 Invitar a un compañero con enlace
+                🔗 Invitar a un compañero con enlace o código
               </button>
             </div>
           </div>
         </section>
 
         <!-- ========================================================
-             PANTALLA 2: MESA DE DIBUJO (EN VIVO / ADIVINAR / LIBRE)
+             PANTALLA 2: MESA DE DIBUJO (EN VIVO / ADIVINAR / LIBRE / P2P)
              ======================================================== -->
         <section class="screen-view" id="screen-dibujo" aria-labelledby="heading-dibujo">
           <div class="page-col">
             <div class="screen-header">
               <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
                 <h1 id="heading-dibujo">Mesa de Dibujo</h1>
-                <div style="display:flex;gap:6px">
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
                   <button type="button" class="btn alt sm" data-act="toggle-draw-mode" id="toggleDrawModeBtn">Modo: Adivinar</button>
                   <button type="button" class="btn alt sm" data-act="toggle-timer-limit" id="toggleTimerBtn">Tiempo: 60 s</button>
                   <button type="button" class="btn alt sm" data-act="next-word">Cambiar palabra</button>
@@ -195,6 +216,31 @@
               </div>
               <p class="subtitle" id="drawSubtitle">Traza sobre el lienzo. El tiempo comienza automáticamente cuando dibujas.</p>
             </div>
+
+            <!-- Barra de Multijugador Real P2P WebRTC -->
+            <div class="multiplayer-bar" id="p2pDrawingBar">
+              <div class="p2p-status solo" id="p2pStatusLabel">
+                <span class="dot"></span>
+                <span id="p2pStatusText">Modo Solitario / Simulación activa</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <button type="button" class="btn alt sm" data-act="create-room">🌐 Crear Sala Online P2P</button>
+                <button type="button" class="btn alt sm" data-act="prompt-join-room">Unirse con Código</button>
+                <button type="button" class="btn light sm" data-act="force-bot-guess" title="Hacer que un compañero virtual intente adivinar ya mismo">🤖 Simular intento de compañero</button>
+              </div>
+            </div>
+
+            <!-- Guía Explicativa Desplegable -->
+            <details class="activity-guide">
+              <summary>ℹ️ ¿Cómo funciona esta mesa? <span style="font-size:12px;font-weight:normal;color:var(--soft)">Toca para ver instrucciones</span></summary>
+              <div class="guide-content">
+                <ol>
+                  <li><b>Dibuja en el lienzo:</b> Al hacer tu primer trazo con el mouse o dedo, el temporizador inicia de forma automática.</li>
+                  <li><b>Adivinanzas en tiempo real:</b> Si activaste los compañeros de prueba (o juegas en una sala online P2P), ellos van escribiendo intentos en el chat mientras dibujas.</li>
+                  <li><b>Acierto y celebración:</b> Quien adivina la palabra correcta desata lluvia de confeti y gana 10 puntos en el marcador de la sesión.</li>
+                </ol>
+              </div>
+            </details>
 
             <!-- Contenedor del Canvas -->
             <div class="card" style="padding:var(--s2)">
@@ -245,11 +291,12 @@
             <div class="guess-section" id="guessSectionBox">
               <!-- Chat de Adivinanzas -->
               <div class="guess-chat-box">
-                <div style="padding:6px 12px;background:var(--panel-subtle);font-weight:800;font-size:11.5px;color:var(--soft);text-transform:uppercase;border-bottom:1px solid var(--line)">
-                  💬 Adivinanzas en tiempo real
+                <div style="padding:6px 12px;background:var(--panel-subtle);font-weight:800;font-size:11.5px;color:var(--soft);text-transform:uppercase;border-bottom:1px solid var(--line);display:flex;justify-content:space-between">
+                  <span>💬 Adivinanzas en tiempo real</span>
+                  <span style="font-size:10.5px;color:var(--sage)">Participantes adivinan automáticamente</span>
                 </div>
                 <div class="guess-messages" id="guessMessages" role="log" aria-live="polite">
-                  <div class="guess-msg system">Escribe tu intento en el campo inferior para adivinar...</div>
+                  <div class="guess-msg system">Dibuja en el lienzo y mira cómo intentan adivinar tu dibujo en este chat...</div>
                 </div>
                 <form class="guess-input-form" id="guessForm">
                   <input type="text" id="guessInput" placeholder="¿Qué crees que es? Escribe aquí..." autocomplete="off">
@@ -303,8 +350,22 @@
               </p>
             </div>
 
+            <details class="activity-guide">
+              <summary>ℹ️ ¿Cómo funciona el Rincón de Palabras? <span style="font-size:12px;font-weight:normal;color:var(--soft)">Toca para ver</span></summary>
+              <div class="guide-content">
+                <ol>
+                  <li><b>100% Asincrónico:</b> No requiere que coincidas con nadie en tiempo real. Entras, dejas tu jugada y te vas.</li>
+                  <li><b>Regla de encadenamiento:</b> Tu palabra debe comenzar con la letra final de la última palabra aportada.</li>
+                  <li><b>Compañeros activos:</b> Tu jugada queda visible en la sala para que el siguiente compañero en tomar un descanso la continúe.</li>
+                </ol>
+                <div style="margin-top:8px">
+                  <button type="button" class="btn alt sm" data-act="simulate-word">🎬 Simular jugada de un compañero</button>
+                </div>
+              </div>
+            </details>
+
             <div class="card">
-              <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:var(--s2);border-bottom:1px solid var(--line);margin-bottom:var(--s3)">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:var(--s2);border-bottom:1px solid var(--line);margin-bottom:var(--s3);flex-wrap:wrap;gap:6px">
                 <span class="status-pill" style="background:var(--sun-soft);color:#8A5D12">
                   ☕ Tema: Pausa de café y oficina
                 </span>
@@ -342,6 +403,13 @@
               <p class="subtitle">3 preguntas rápidas para descubrir afinidades con tus compañeros de equipo.</p>
             </div>
 
+            <details class="activity-guide">
+              <summary>ℹ️ ¿Cómo funciona la Trivia? <span style="font-size:12px;font-weight:normal;color:var(--soft)">Toca para ver</span></summary>
+              <div class="guide-content">
+                <p>Pausa activa de 45 segundos. No hay respuestas correctas ni erradas: el objetivo es compartir preferencias (como cuál es tu horario ideal de café) para romper el hielo y encontrar temas en común.</p>
+              </div>
+            </details>
+
             <div class="trivia-box">
               <div class="trivia-progress">
                 <span id="triviaQuestionNum">Pregunta 1 de 3</span>
@@ -360,7 +428,51 @@
         </section>
 
         <!-- ========================================================
-             PANTALLA 5: MOMENTO POST-PARTIDA ("LA CAFETERÍA")
+             PANTALLA 5: EL PASILLO · CAFÉ VIRTUAL (NUEVA ACTIVIDAD 4)
+             ======================================================== -->
+        <section class="screen-view" id="screen-pasillo" aria-labelledby="heading-pasillo">
+          <div class="page-col">
+            <div class="screen-header">
+              <h1 id="heading-pasillo">El Pasillo · Café Virtual</h1>
+              <p class="subtitle">Charla informal de baja fricción. El rincón donde te encuentras con compañeros sin reuniones forzadas.</p>
+            </div>
+
+            <details class="activity-guide">
+              <summary>ℹ️ ¿Cómo funciona El Pasillo? <span style="font-size:12px;font-weight:normal;color:var(--soft)">Toca para ver</span></summary>
+              <div class="guide-content">
+                <p>Simula el encuentro casual junto a la cafetera. Comparte una anécdota, deja una recomendación o responde al tema del día. Puedes reaccionar con café ☕, galleta 🍪 o aplauso 👏.</p>
+                <div style="margin-top:8px">
+                  <button type="button" class="btn alt sm" data-act="simulate-pasillo-msg">🎬 Simular mensaje de un compañero</button>
+                </div>
+              </div>
+            </details>
+
+            <div class="pasillo-board">
+              <div class="pasillo-topic-card">
+                <span class="status-pill" style="background:var(--sun-soft);color:#8A5D12;margin-bottom:6px">☕ Tema del Día en el Café</span>
+                <h3 style="margin-top:4px" id="pasilloTopicText">«¿Cuál es tu canción o sonido infalible para concentrarte teletrabajando?»</h3>
+              </div>
+
+              <!-- Muro de Notas de Descanso -->
+              <div class="pasillo-notes-grid" id="pasilloNotesGrid">
+                <!-- Se llena con las notas -->
+              </div>
+
+              <!-- Formulario de Publicación de Nota Rápida -->
+              <form id="pasilloForm" class="pasillo-input-bar">
+                <input type="text" id="pasilloInput" placeholder="Escribe un saludo, anécdota o recomendación..." maxlength="120" autocomplete="off">
+                <button type="submit" class="btn">Dejar nota</button>
+              </form>
+            </div>
+
+            <div class="actions-row">
+              <button type="button" class="btn alt" data-go="mapa">Volver a la sala</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================================
+             PANTALLA 6: MOMENTO POST-PARTIDA ("LA CAFETERÍA")
              ======================================================== -->
         <section class="screen-view" id="screen-fin" aria-labelledby="heading-fin">
           <div class="postgame-veil">
@@ -400,7 +512,7 @@
         </section>
 
         <!-- ========================================================
-             PANTALLA 6: TU RINCÓN (PERFIL & PERSONALIZACIÓN)
+             PANTALLA 7: TU RINCÓN (PERFIL & PERSONALIZACIÓN)
              ======================================================== -->
         <section class="screen-view" id="screen-perfil" aria-labelledby="heading-perfil">
           <div class="page-col">
@@ -496,18 +608,34 @@
 
   </div>
 
-  <!-- Diálogo Nativo: Compartir Sala -->
+  <!-- Diálogo Nativo: Compartir Sala Online / Invitar -->
   <dialog id="shareRoomDialog">
     <div class="modal-card">
-      <h2>🔗 Invitar a un Compañero</h2>
+      <h2>🔗 Invitar a un Compañero en Línea</h2>
       <p style="color:var(--soft);margin:var(--s2) 0 var(--s3);font-size:14px">
-        Comparte este enlace para que un compañero de trabajo se una a tu misma sala de descanso.
+        Comparte este enlace o tu código de sala para que un compañero juegue contigo en tiempo real por WebRTC.
       </p>
-      <input type="text" readonly value="https://hinara.github.io/PlayBreak/#dibujo" 
+      <input type="text" id="shareRoomInput" readonly value="https://hinarasm12.github.io/PlayBreak/" 
         style="width:100%;padding:10px 14px;border:2px solid var(--line);border-radius:var(--r-pill);background:var(--bg);text-align:center;font-weight:700;margin-bottom:var(--s3)">
       <div class="actions-row center">
         <button type="button" class="btn" data-act="copy-invite-link">Copiar Enlace</button>
         <button type="button" class="btn alt" onclick="document.getElementById('shareRoomDialog').close()">Cerrar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Diálogo Nativo: Unirse a Sala Online P2P -->
+  <dialog id="joinRoomDialog">
+    <div class="modal-card">
+      <h2>🌐 Unirse a una Sala Online</h2>
+      <p style="color:var(--soft);margin:var(--s2) 0 var(--s3);font-size:14px">
+        Introduce el código de sala que te compartió tu compañero para conectarte en vivo:
+      </p>
+      <input type="text" id="joinRoomCodeInput" placeholder="Ej: SALA-4821" maxlength="12"
+        style="width:100%;padding:10px 14px;border:2px solid var(--line);border-radius:var(--r-pill);background:var(--bg);text-align:center;font-weight:700;margin-bottom:var(--s3);text-transform:uppercase">
+      <div class="actions-row center">
+        <button type="button" class="btn" data-act="confirm-join-room">Conectarse</button>
+        <button type="button" class="btn alt" onclick="document.getElementById('joinRoomDialog').close()">Cancelar</button>
       </div>
     </div>
   </dialog>
