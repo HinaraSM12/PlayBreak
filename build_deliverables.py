@@ -1,17 +1,23 @@
 # -*- coding: utf-8 -*-
 """
 Generador del Entregable 6 Académico y Profesional
-Universidad Nacional de Colombia - Facultad de Minas
+Universidad Nacional de Colombia - Facultad de Minas - Sede Medellín
 Interacción Humano-Computador (IHC) - Grupo #7
+
+Genera simultáneamente:
+1. Documentación/Entregas/Entregable 6 - Grupo 7 - Evaluacion y cambios.docx
+2. Entregable_6_Grupo_7_Evaluacion_y_Cambios.docx
+3. Documentación/Entregas/Entregable_6_Grupo_7_Evaluacion_y_Cambios.md
+4. Entregable_6_Grupo_7_Evaluacion_y_Cambios.md
 """
 
 import os
 import docx
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
-from docx.oxml import OxmlElement, parse_xml
-from docx.oxml.ns import nsdecls, qn
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls
 
 def set_cell_background(cell, fill_hex):
     """Establece color de fondo de una celda en tabla docx."""
@@ -35,14 +41,14 @@ def set_cell_margins(cell, top=100, bottom=100, left=150, right=150):
 def create_document():
     doc = docx.Document()
 
-    # Configuración de márgenes estándar de 2.5 cm (aprox 1 pulgada)
+    # Márgenes de 2.5 cm (1 pulgada)
     for section in doc.sections:
         section.top_margin = Inches(1.0)
         section.bottom_margin = Inches(1.0)
         section.left_margin = Inches(1.0)
         section.right_margin = Inches(1.0)
 
-    # Colores del proyecto (Regla 60-30-10)
+    # Colores corporativos del sistema de diseño (60-30-10)
     COLOR_PRIMARY = RGBColor(122, 78, 45)      # Café #7A4E2D
     COLOR_DARK = RGBColor(50, 38, 30)          # Madera #32261E
     COLOR_MUTED = RGBColor(124, 109, 96)       # Soft #7C6D60
@@ -57,24 +63,24 @@ def create_document():
     r_inst.font.color.rgb = COLOR_MUTED
 
     p_space = doc.add_paragraph()
-    p_space.paragraph_format.space_before = Pt(40)
+    p_space.paragraph_format.space_before = Pt(36)
 
     p_title = doc.add_paragraph()
     p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r_title = p_title.add_run("ENTREGABLE 6:\nEVALUACIÓN DEL PROTOTIPO PLAYBREAK Y PLAN DE CAMBIOS PARA LA IMPLEMENTACIÓN")
+    r_title = p_title.add_run("ENTREGABLE 6:\nEVALUACIÓN DEL PROTOTIPO PLAYBREAK, DIAGRAMAS DE FLUJO DE TAREAS Y PLAN DE IMPLEMENTACIÓN")
     r_title.bold = True
-    r_title.font.size = Pt(20)
+    r_title.font.size = Pt(19)
     r_title.font.color.rgb = COLOR_PRIMARY
 
     p_sub = doc.add_paragraph()
     p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r_sub = p_sub.add_run("Análisis de Usabilidad con el Instrumento SUS, Diagnóstico Crítico de Hallazgos Cualitativos y Especificación de la Versión Final")
+    r_sub = p_sub.add_run("Evaluación de Usabilidad SUS, Diagnóstico de Severidad de Nielsen, Diagramas de Flujo y Hoja Resumen Ejecutiva de la Versión Final")
     r_sub.italic = True
-    r_sub.font.size = Pt(12)
+    r_sub.font.size = Pt(11.5)
     r_sub.font.color.rgb = COLOR_DARK
 
     p_space2 = doc.add_paragraph()
-    p_space2.paragraph_format.space_before = Pt(60)
+    p_space2.paragraph_format.space_before = Pt(50)
 
     p_team = doc.add_paragraph()
     p_team.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -94,42 +100,32 @@ def create_document():
 
     p_date = doc.add_paragraph()
     p_date.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_date.paragraph_format.space_before = Pt(40)
+    p_date.paragraph_format.space_before = Pt(36)
     r_date = p_date.add_run("Semestre Académico 2025-1 / Febrero - Octubre 2026\nMedellín, Antioquia, Colombia")
     r_date.font.size = Pt(10)
     r_date.font.color.rgb = COLOR_MUTED
 
     doc.add_page_break()
 
-    # --- FUNCIONES DE ASISTENCIA PARA FORMATO ---
+    # --- HELPERS PARA FORMATO ---
     def add_h1(text):
         p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(18)
-        p.paragraph_format.space_after = Pt(6)
+        p.paragraph_format.space_before = Pt(16)
+        p.paragraph_format.space_after = Pt(5)
         r = p.add_run(text)
         r.bold = True
-        r.font.size = Pt(15)
+        r.font.size = Pt(14)
         r.font.color.rgb = COLOR_PRIMARY
         return p
 
     def add_h2(text):
         p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(12)
-        p.paragraph_format.space_after = Pt(4)
+        p.paragraph_format.space_before = Pt(11)
+        p.paragraph_format.space_after = Pt(3)
         r = p.add_run(text)
         r.bold = True
-        r.font.size = Pt(13)
+        r.font.size = Pt(12)
         r.font.color.rgb = COLOR_DARK
-        return p
-
-    def add_h3(text):
-        p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(8)
-        p.paragraph_format.space_after = Pt(2)
-        r = p.add_run(text)
-        r.bold = True
-        r.font.size = Pt(11)
-        r.font.color.rgb = COLOR_PRIMARY
         return p
 
     def add_body(text, bold_prefix=None, italic=False):
@@ -139,131 +135,104 @@ def create_document():
         if bold_prefix:
             rb = p.add_run(bold_prefix)
             rb.bold = True
-            rb.font.size = Pt(10.5)
+            rb.font.size = Pt(10)
             rb.font.color.rgb = COLOR_DARK
         r = p.add_run(text)
         r.italic = italic
-        r.font.size = Pt(10.5)
+        r.font.size = Pt(10)
         r.font.color.rgb = COLOR_DARK
         return p
 
     def add_callout(text, title="NOTA DE DISEÑO"):
-        p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(6)
-        p.paragraph_format.space_after = Pt(6)
-        p.paragraph_format.left_indent = Inches(0.25)
-        p.paragraph_format.right_indent = Inches(0.25)
-        
         table = doc.add_table(rows=1, cols=1)
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
         cell = table.cell(0, 0)
         set_cell_background(cell, "F5EFE3")
-        set_cell_margins(cell, top=120, bottom=120, left=180, right=180)
-        
+        set_cell_margins(cell, top=100, bottom=100, left=150, right=150)
         cp = cell.paragraphs[0]
         cp.paragraph_format.space_after = Pt(2)
         r_title = cp.add_run(f"📌 {title}: ")
         r_title.bold = True
-        r_title.font.size = Pt(10)
+        r_title.font.size = Pt(9.5)
         r_title.font.color.rgb = COLOR_PRIMARY
-        
         r_text = cp.add_run(text)
         r_text.font.size = Pt(9.5)
         r_text.font.color.rgb = COLOR_DARK
         doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
     # ========================================================
-    # SECCIÓN 1: RESUMEN EJECUTIVO
+    # SECCIÓN 1: HOJA RESUMEN EJECUTIVA (SLIDE 117-119 HCI)
     # ========================================================
-    add_h1("1. Resumen Ejecutivo")
+    add_h1("1. Hoja Resumen Ejecutiva (Executive Summary Sheet)")
     add_body(
-        "El presente informe consolida los resultados de la evaluación de usabilidad aplicada al prototipo interactivo de PlayBreak, "
-        "una solución diseñada en el marco del curso de Interacción Humano-Computador para mitigar la fatiga virtual y el aislamiento "
-        "interpersonal en equipos de teletrabajo y estudio híbrido. La evaluación se llevó a cabo utilizando la escala estandarizada "
-        "System Usability Scale (SUS, Brooke, 1986), complementada con preguntas cualitativas abiertas y observación de tareas sobre una "
-        "muestra de 5 participantes representativos."
-    )
-    add_body(
-        "Los resultados cuantitativos arrojaron un puntaje promedio SUS de 77,5 sobre 100 y una mediana de 92,5. "
-        "Cuatro de los cinco participantes evaluaron el sistema con puntajes sobresalientes (entre 70,0 y 97,5), superando holgadamente "
-        "el estándar de 68 puntos que la literatura define como referencia de usabilidad aceptable (Bangor et al., 2008). "
-        "No obstante, se identificó un caso atípico significativo de 32,5 puntos. El análisis detallado demostró que este resultado no fue ruido estadístico: "
-        "el participante explicó que la presencia de jugadores precargados y ficticios en el código (Sara, Tomás y Lucía) generó profunda confusión, "
-        "impidiéndole comprender cómo iniciar una partida limpia desde cero."
-    )
-    add_body(
-        "La dimensión mejor evaluada fue la seguridad al utilizar el sistema (4,8 sobre 5,0; 3,8 sobre 4,0 ajustado), "
-        "lo cual valida experimentalmente el principio rector del proyecto: 'Aquí nada es obligatorio ni evaluado'. "
-        "Por el contrario, el aspecto más vulnerable fue el primer contacto (onboarding), reflejado en una mayor dispersión "
-        "en los ítems relativos a ayuda técnica y necesidad de aprendizaje previo."
-    )
-    add_callout(
-        "Decisión de diseño e ingeniería: Para la versión de implementación (v3 y v3.5 en producción), el equipo eliminó todo dato ficticio precargado. "
-        "Las partidas comienzan de forma limpia ('Tú'). Se simplificó la sala a una sola acción principal por pantalla, se incorporó un temporizador "
-        "opcional configurable, modos de dibujo (palabra secreta con pistas vs. dibujo libre), un marcador de aciertos y un módulo de trivia rápida, "
-        "manteniendo intacta la salida libre y discreta ('ghosting amigable').",
-        "DECISIÓN ESTRATÉGICA DE REDISEÑO"
+        "Siguiendo el estándar de síntesis de alto nivel enseñado en las diapositivas 117 a 119 de clase, "
+        "se presenta la Hoja Resumen Ejecutiva que condensa la ronda de evaluación, sus métricas clave y las decisiones implementadas:"
     )
 
+    t_exec = doc.add_table(rows=6, cols=2)
+    t_exec.alignment = WD_TABLE_ALIGNMENT.CENTER
+    exec_data = [
+        ("Propósito y Alcance", "Evaluar la usabilidad y adopción de PlayBreak como plataforma de micro-pausas activas no invasivas para mitigar la fatiga virtual y el aislamiento en equipos remotos. Se evaluaron 4 flujos principales con 5 participantes."),
+        ("Población y Muestra", "5 participantes (n=5) representativos de la persona arquetípica Juliana Ospina (profesionales de teletrabajo/híbrido). Prueba moderada con protocolo Think-Aloud y cuestionario estandarizado SUS."),
+        ("Métricas SUS Consolidadas", "• Promedio SUS: 77,5 / 100 (Grado B+ / Aceptable - Buena según Bangor et al., 2008)\n• Mediana SUS: 92,5 / 100 (Grado A+ / Rango de Excelencia)\n• Sensación de Seguridad (Ítem 9): 4,8 / 5,0 (Máxima puntuación: valida cero presión social)\n• Fricción Inicial (Ítem 4): 2,2 / 5,0 (Punto débil corregido: desconcierto en onboarding)"),
+        ("Gráfico Semáforo Consolidado", "🟢 Verde (Excelente): Mesa de Dibujo, Momento Post-Partida, Salida Silenciosa, Ausencia de Presión.\n🟡 Amarillo (Fricción Menor): Petición de temporizador, modos de juego y variedad lúdica.\n🔴 Rojo (Crítico en v1): Jugadores hardcodeados en código que confundieron al P2 (SUS: 32,5)."),
+        ("Top 3 Hallazgos Críticos", "1. Onboarding confuso por bots ficticios fijos (Severidad 3: Mayor -> Resuelto con partida limpia de cero).\n2. Necesidad de control en dibujo (Severidad 2: Menor -> Resuelto con selector 60s/30s/libre y modos adivinar/libre).\n3. Deseo de mayor variedad e interacción (Severidad 1: Cosmético -> Resuelto con Trivia de 18 preguntas con medallas, El Pasillo y chat de voz WebRTC en Cafetería)."),
+        ("Estado de Implementación", "Versión v4.0 completa desplegada en GitHub Pages: Lienzo reactivo P2P WebRTC, prevención de palabras duplicadas, trivia con temporizador de 15s y medallas, chat de voz en tiempo real y perfil con niveles e insignias.")
+    ]
+
+    for r_idx, (k, v) in enumerate(exec_data):
+        c1 = t_exec.cell(r_idx, 0)
+        c2 = t_exec.cell(r_idx, 1)
+        set_cell_background(c1, "EBDDC2")
+        set_cell_background(c2, "FFFDF9")
+        set_cell_margins(c1, 80, 80, 120, 120)
+        set_cell_margins(c2, 80, 80, 120, 120)
+        p1 = c1.paragraphs[0]
+        r1 = p1.add_run(k)
+        r1.bold = True
+        r1.font.size = Pt(9.5)
+        r1.font.color.rgb = COLOR_PRIMARY
+        p2 = c2.paragraphs[0]
+        r2 = p2.add_run(v)
+        r2.font.size = Pt(9)
+        r2.font.color.rgb = COLOR_DARK
+
     # ========================================================
-    # SECCIÓN 2: MARCO METODOLÓGICO DE LA EVALUACIÓN
+    # SECCIÓN 2: MARCO METODOLÓGICO Y PROTOCOLO DE PRUEBA
     # ========================================================
     add_h1("2. Marco Metodológico de la Evaluación con Usuarios")
     add_body(
-        "La evaluación se estructuró siguiendo los lineamientos metodológicos expuestos en las sesiones de clase "
-        "(Facultad de Minas, diapositivas sobre 'Reclutar usuarios y conducir las pruebas' y 'Analizar los resultados'). "
-        "A continuación se detallan los componentes del protocolo experimental:"
-    )
-
-    add_h2("2.1 Tamaño y Criterio de Selección de la Muestra (n = 5)")
-    add_body(
-        "Conforme a la investigación clásica de Nielsen y Landauer (1993) y las recomendaciones del Nielsen Norman Group citadas en clase "
-        "(diapositiva 73), una muestra de 5 evaluadores es suficiente para descubrir entre el 80% y el 85% de los problemas de usabilidad "
-        "en un diseño interactivo cualitativo. Los participantes fueron reclutados considerando su afinidad con el perfil de la persona "
-        "del proyecto ('Juliana Ospina', profesional que trabaja en modalidad remota/híbrida con menos de un año de antigüedad)."
-    )
-
-    add_h2("2.2 Protocolo de Pensamiento en Voz Alta (Think-Aloud Protocol)")
-    add_body(
-        "Durante la sesión de prueba, se aplicó el protocolo de 'pensar en voz alta' (diapositivas 86 y 89 de clase). "
-        "Antes de iniciar, se fijaron expectativas explícitas: se aclaró al usuario que se estaba evaluando el prototipo y no sus habilidades personales, "
-        "fomentando la honestidad en sus apreciaciones. Los facilitadores mantuvieron una postura de observación no intrusiva, evitando intervenir "
-        "cuando los participantes se atascaban, con el objetivo de capturar la conducta natural ante posibles puntos ciegos de la interfaz."
-    )
-
-    add_h2("2.3 Flujos de Tareas Evaluados")
-    add_body("Cada participante interactuó con los dos caminos felices diseñados en el Entregable 4 y 5:")
-    add_body(
-        "El participante accedió a la sala, ingresó a la Mesa de Dibujo, observó la dinámica en tiempo real, "
-        "interactuó con las herramientas de trazo y avanzó a la pantalla post-partida ('La Cafetería / ¿Se quedan 2 minutos más?').",
-        bold_prefix="• Tarea 1 (Flujo Sincrónico - Jugar en Vivo): "
+        "La evaluación se ejecutó bajo los lineamientos metodológicos expuestos en las diapositivas de clase "
+        "('Planificar y definir pruebas' y 'Analizar los resultados'). Se estructuró en cuatro pilares:"
     )
     add_body(
-        "El participante ingresó al Rincón de Palabras, interpretó la regla de encadenamiento (última letra de la palabra previa), "
-        "redactó su aporte y confirmó el envío sin necesidad de coincidencia temporal con otros compañeros.",
-        bold_prefix="• Tarea 2 (Flujo Asincrónico - Jugada por Turnos): "
+        "Conforme a Nielsen y Landauer (1993) y el Nielsen Norman Group (diapositiva 73), 5 evaluadores descubren "
+        "entre el 80% y 85% de los problemas de usabilidad cualitativos sin incurrir en redundancias costosas. "
+        "Los usuarios fueron seleccionados por su coincidencia con el arquetipo de teletrabajador del Entregable 3.",
+        bold_prefix="2.1 Muestra Representativa (n = 5): "
     )
-
-    add_h2("2.4 Instrumento Estándar: System Usability Scale (SUS)")
     add_body(
-        "Al finalizar las tareas, se administró el cuestionario estandarizado SUS (Brooke, 1986), compuesto por 10 ítems con escala tipo Likert "
-        "de 5 puntos (1 = Totalmente en desacuerdo, 5 = Totalmente de acuerdo), alternando formulaciones positivas e impares con negativas y pares. "
-        "Se incluyó además un campo abierto obligatorio para recoger justificaciones cualitativas."
+        "Se instruyó a los evaluadores a exteriorizar sus dudas y expectativas sin temor. Se aclaró enfáticamente "
+        "que se evaluaba el software y no sus capacidades. Los facilitadores mantuvieron una postura de observación pasiva "
+        "para registrar la interacción orgánica (diapositivas 86 y 89 de clase).",
+        bold_prefix="2.2 Protocolo Think-Aloud (Pensamiento en Voz Alta): "
+    )
+    add_body(
+        "Al finalizar las tareas, se administró el cuestionario estándar SUS (Brooke, 1986) compuesto por 10 ítems "
+        "en escala Likert de 5 puntos, alternando afirmaciones positivas y negativas, complementado con preguntas cualitativas abiertas.",
+        bold_prefix="2.3 Instrumento Estandarizado SUS: "
     )
 
     # ========================================================
     # SECCIÓN 3: RESULTADOS CUANTITATIVOS (SUS)
     # ========================================================
     add_h1("3. Resultados Cuantitativos del Instrumento SUS")
-
-    add_h2("3.1 Matriz de Respuestas y Puntaje por Participante")
     add_body(
-        "El cálculo del puntaje SUS se realizó aplicando la transformación estándar de Brooke: "
-        "para afirmaciones impares (positivas) se resta 1 al valor emitido (X - 1); para afirmaciones pares (negativas) se resta el valor a 5 (5 - X). "
-        "La suma de los 10 valores transformados se multiplica por 2,5 para obtener una escala final de 0 a 100."
+        "El puntaje SUS individual se calculó aplicando la fórmula canónica: para ítems impares (positivos) se resta 1 (X - 1); "
+        "para ítems pares (negativos) se resta el valor a 5 (5 - X). La suma acumulada se multiplica por 2,5 para escalar de 0 a 100:"
     )
 
-    # Tabla 1: Respuestas y SUS
+    # Tabla 1: Resultados SUS
     t1 = doc.add_table(rows=7, cols=5)
     t1.alignment = WD_TABLE_ALIGNMENT.CENTER
     headers_t1 = ["Participante", "Fecha / Hora", "SUS (0-100)", "Calificación Bangor", "Comentario Clave Cualitativo"]
@@ -288,78 +257,19 @@ def create_document():
     for row_idx, data_row in enumerate(data_t1, start=1):
         for col_idx, text in enumerate(data_row):
             cell = t1.cell(row_idx, col_idx)
-            if row_idx == 6:
-                set_cell_background(cell, "EBDDC2")
-            else:
-                set_cell_background(cell, "FFFDF9" if row_idx % 2 == 1 else "F5EFE3")
+            set_cell_background(cell, "EBDDC2" if row_idx == 6 else ("FFFDF9" if row_idx % 2 == 1 else "F5EFE3"))
             p = cell.paragraphs[0]
             r = p.add_run(text)
-            r.font.size = Pt(9)
+            r.font.size = Pt(8.5)
             if row_idx == 6 or col_idx == 0:
                 r.bold = True
             r.font.color.rgb = COLOR_DARK
 
     add_body(
-        "Interpretación de la dispersión: La distribución presenta un comportamiento bimodal marcado: cuatro de cinco participantes otorgaron "
-        "calificaciones sobresalientes (entre 70,0 y 97,5), mientras que el Participante 2 puntuó 32,5. "
-        "Si se tratara al Participante 2 como una anomalía matemática y se excluyera, el promedio ascendería a 88,75. "
-        "No obstante, metodológicamente es un error descartarlo: su comentario fundamentó de forma precisa un fallo de onboarding que "
-        "afecta a los usuarios novatos. Por tanto, el equipo reporta con total honestidad la mediana (92,5) y el rango completo (32,5 a 97,5).",
-        bold_prefix="Análisis estadístico: "
-    )
-
-    add_h2("3.2 Análisis Ítem por Ítem en Escala Normalizada (0 a 4)")
-    add_body(
-        "Para comparar de forma homogénea las afirmaciones positivas y negativas, se normalizaron los puntajes a una escala de 0 (peor experiencia) "
-        "a 4 (mejor experiencia):"
-    )
-
-    # Tabla 2: Análisis por Ítems
-    t2 = doc.add_table(rows=11, cols=5)
-    t2.alignment = WD_TABLE_ALIGNMENT.CENTER
-    headers_t2 = ["#", "Afirmación SUS", "Prom. Original (1-5)", "Prom. Ajustado (0-4)", "Diagnóstico UX"]
-    for col_idx, text in enumerate(headers_t2):
-        cell = t2.cell(0, col_idx)
-        set_cell_background(cell, "7A4E2D")
-        p = cell.paragraphs[0]
-        r = p.add_run(text)
-        r.bold = True
-        r.font.size = Pt(9.5)
-        r.font.color.rgb = RGBColor(255, 255, 255)
-
-    data_t2 = [
-        ("1", "Me gustaría usar este sistema con frecuencia", "4,0", "3,00", "Buena disposición hacia pausas regulares."),
-        ("2", "El sistema es innecesariamente complejo", "2,0", "3,00", "Baja percepción de complejidad intrínseca."),
-        ("3", "El sistema fue fácil de usar", "4,0", "3,00", "Facilidad general en las tareas de dibujo y palabras."),
-        ("4", "Necesitaría ayuda técnica para usar el sistema", "2,2", "2,80", "Punto más débil: dudas en el primer contacto."),
-        ("5", "Las funciones del sistema están bien integradas", "4,2", "3,20", "Alta coherencia entre salas y momentos."),
-        ("6", "El sistema presenta demasiada inconsistencia", "2,0", "3,00", "Buen reconocimiento de estándares visuales."),
-        ("7", "La mayoría aprendería a usarlo muy rápidamente", "4,0", "3,00", "Curva de aprendizaje percibida como breve."),
-        ("8", "El sistema es engorroso de usar", "2,0", "3,00", "Fluidez sin pasos burocráticos."),
-        ("9", "Me sentí muy seguro usando el sistema", "4,8", "3,80", "Calificación máxima: el principio voluntario triunfa."),
-        ("10", "Necesité aprender muchas cosas antes de usarlo", "1,8", "3,20", "Baja barrera conceptual de entrada.")
-    ]
-
-    for row_idx, data_row in enumerate(data_t2, start=1):
-        for col_idx, text in enumerate(data_row):
-            cell = t2.cell(row_idx, col_idx)
-            set_cell_background(cell, "FFFDF9" if row_idx % 2 == 1 else "F5EFE3")
-            p = cell.paragraphs[0]
-            r = p.add_run(text)
-            r.font.size = Pt(8.5)
-            if col_idx == 0:
-                r.bold = True
-            if col_idx == 3 and data_row[0] == "9":
-                r.bold = True
-                cell.paragraphs[0].runs[0].font.color.rgb = COLOR_SAGE
-            r.font.color.rgb = COLOR_DARK
-
-    add_body(
-        "Subescalas de Lewis y Sauro (2009): Al desagregar el SUS en sus dos factores subyacentes, "
-        "la Subescala de Usabilidad (ítems 1, 2, 3, 5, 6, 7, 8 y 9) alcanza 78,1 puntos sobre 100, "
-        "mientras que la Subescala de Facilidad de Aprendizaje / Learnability (ítems 4 y 10) promedia 75,0 puntos. "
-        "La diferencia corrobora que la interacción operativa no genera problemas, pero la bienvenida y el estado inicial requerían un rediseño radical.",
-        bold_prefix="Descomposición factorial: "
+        "Interpretación metodológica: La distribución presenta un patrón bimodal evidente. Si se excluyera al P2 como valor atípico, "
+        "la media subiría a 88,75. Sin embargo, no se descarta porque su testimonio reveló el fallo de onboarding más importante del prototipo v1. "
+        "Subescala de Usabilidad (Lewis & Sauro, 2009): 78,1 / 100. Subescala de Facilidad de Aprendizaje (Learnability): 75,0 / 100.",
+        bold_prefix="Análisis de dispersión: "
     )
 
     # ========================================================
@@ -367,16 +277,13 @@ def create_document():
     # ========================================================
     add_h1("4. Análisis Cualitativo y Gráfico Semáforo (Stoplight Chart)")
     add_body(
-        "De acuerdo con la técnica enseñada en las diapositivas 100 a 110 de clase, el Gráfico Semáforo (Stoplight Chart) "
-        "ofrece una vista sintetizada y multidimensional que cruza a los evaluadores con los componentes y tareas de la interfaz. "
-        "Se utilizan tres códigos semánticos: Verde (desempeño fluido / satisfacción), Amarillo (duda o fricción menor superada), "
-        "y Rojo (confusión severa o bloqueo que impidió completar la intención del usuario)."
+        "Conforme a las diapositivas 100 a 110 de clase, el Gráfico Semáforo cruza a los evaluadores con los aspectos "
+        "clave del sistema: Verde (fluido/satisfactorio), Amarillo (fricción superada) y Rojo (bloqueo/confusión severa):"
     )
 
-    # Tabla 3: Stoplight Chart
     t3 = doc.add_table(rows=7, cols=7)
     t3.alignment = WD_TABLE_ALIGNMENT.CENTER
-    headers_t3 = ["Componente / Aspecto Evaluado", "P1", "P2", "P3", "P4", "P5", "Síntesis del Hallazgo"]
+    headers_t3 = ["Componente / Aspecto", "P1", "P2", "P3", "P4", "P5", "Síntesis del Hallazgo"]
     for col_idx, text in enumerate(headers_t3):
         cell = t3.cell(0, col_idx)
         set_cell_background(cell, "7A4E2D")
@@ -387,12 +294,12 @@ def create_document():
         r.font.color.rgb = RGBColor(255, 255, 255)
 
     data_t3 = [
-        ("1. Estado Inicial & Onboarding", "VERDE", "ROJO", "AMARILLO", "VERDE", "VERDE", "P2 se confundió con bots ficticios. P3 dudó."),
-        ("2. Mesa de Dibujo (Lienzo & Dinámica)", "VERDE", "AMARILLO", "VERDE", "VERDE", "VERDE", "Muy valorado. P1 pidió tiempo y modo libre."),
-        ("3. Rincón de Palabras (Asíncrono)", "VERDE", "AMARILLO", "VERDE", "VERDE", "VERDE", "Mecánica clara; P2 dudó al no ver partida limpia."),
-        ("4. Momento Post-Partida & Salida", "VERDE", "VERDE", "VERDE", "VERDE", "VERDE", "Aprobación unánime: salida sin culpa validada."),
-        ("5. Tu Rincón (Perfil & Avatar)", "VERDE", "VERDE", "AMARILLO", "VERDE", "VERDE", "Comprensión alta; P5 pidió ampliar cosmética."),
-        ("6. Percepción de No-Obligatoriedad", "VERDE", "VERDE", "VERDE", "VERDE", "VERDE", "Consistencia total: ítem de seguridad = 4,8/5,0.")
+        ("1. Estado Inicial & Onboarding", "VERDE", "ROJO", "AMARILLO", "VERDE", "VERDE", "P2 confundido por bots ficticios. P3 dudó."),
+        ("2. Mesa de Dibujo (Lienzo)", "VERDE", "AMARILLO", "VERDE", "VERDE", "VERDE", "Muy valorado. P1 pidió tiempo y modo libre."),
+        ("3. Rincón de Palabras (Turnos)", "VERDE", "AMARILLO", "VERDE", "VERDE", "VERDE", "Mecánica clara; P2 dudó ante falta de partida limpia."),
+        ("4. Momento Post-Partida", "VERDE", "VERDE", "VERDE", "VERDE", "VERDE", "Aprobación unánime: salida sin culpa validada."),
+        ("5. Tu Rincón (Perfil)", "VERDE", "VERDE", "AMARILLO", "VERDE", "VERDE", "Comprensión alta; P5 pidió ampliar cosmética."),
+        ("6. No-Obligatoriedad", "VERDE", "VERDE", "VERDE", "VERDE", "VERDE", "Consistencia total: ítem de seguridad = 4,8/5,0.")
     ]
 
     for row_idx, data_row in enumerate(data_t3, start=1):
@@ -423,96 +330,150 @@ def create_document():
                     r.bold = True
                 r.font.color.rgb = COLOR_DARK
 
-    add_h2("4.2 Citas Destacadas (Pull Quotes de los Usuarios)")
+    # ========================================================
+    # SECCIÓN 5: CLASIFICACIÓN DE SEVERIDAD DE NIELSEN
+    # ========================================================
+    add_h1("5. Diagnóstico de Problemas y Escala de Severidad de Nielsen")
     add_body(
-        "Como señalan las diapositivas 106 a 108 de clase, la forma más poderosa de abogar por los usuarios en el equipo de desarrollo "
-        "es dejar que sus propias palabras hablen directamente. Se extraen a continuación los testimonios textuales más reveladores:"
+        "Para priorizar las soluciones de ingeniería se aplicó la Escala de Severidad de Usabilidad de Jakob Nielsen (1994), "
+        "clasificando los problemas encontrados desde nivel 0 (sin problema) hasta nivel 4 (catástrofe):"
     )
 
-    add_callout(
-        "«El problema principal es que los jugadores hardcodeados (sara, tomas, lucia) hace confusa la experiencia, "
-        "me gustaría empezar una partida de cero para poder entender el juego.» — Participante 2 (SUS: 32,5).",
-        "PULL QUOTE 1 · CLARIDAD DE ESTADO INICIAL"
+    t_sev = doc.add_table(rows=5, cols=4)
+    t_sev.alignment = WD_TABLE_ALIGNMENT.CENTER
+    headers_sev = ["Nivel de Severidad", "Problema Identificado", "Impacto en el Usuario", "Solución Implementada en v4.0"]
+    for col_idx, text in enumerate(headers_sev):
+        cell = t_sev.cell(0, col_idx)
+        set_cell_background(cell, "7A4E2D")
+        p = cell.paragraphs[0]
+        r = p.add_run(text)
+        r.bold = True
+        r.font.size = Pt(9.5)
+        r.font.color.rgb = RGBColor(255, 255, 255)
+
+    data_sev = [
+        ("Nivel 3 · Problema Mayor (Alta Prioridad)", "Jugadores precargados ficticios en v1 (Sara, Tomás, Lucía) fijos en la partida.", "Confusión severa en P2 (SUS: 32,5); creyó que el sistema estaba ocupado o roto.", "Partida limpia de cero con solo 'Tú'. Toggle transparente de simulación opcional."),
+        ("Nivel 2 · Problema Menor (Media Prioridad)", "Falta de control temporal en dibujo y repetición de palabras en la cadena.", "P1 no sabía cuánto duraría el break. En palabras se podían repetir vocablos.", "Selector de 60s/30s/libre con inicio al trazar. Validador estricto de palabras ya usadas."),
+        ("Nivel 2 · Problema Menor (Media Prioridad)", "Loop de puntuación infinita en adivinanza multijugador P2P.", "Al adivinar remotamente se generaba un eco en bucle otorgando puntos infinitos.", "Guard estricto State.draw.roundWon = true y flag broadcast=false en eventos remotos."),
+        ("Nivel 1 · Cosmético (Baja Prioridad)", "Poca variedad de minijuegos y perfil sin impacto visible en la experiencia.", "P5 solicitó expandir actividades y dar utilidad real a los gustos seleccionados.", "Trivia gamificada con medallas, El Pasillo, voz WebRTC y preguntas según gustos.")
+    ]
+
+    for row_idx, row_vals in enumerate(data_sev, start=1):
+        for col_idx, val in enumerate(row_vals):
+            cell = t_sev.cell(row_idx, col_idx)
+            set_cell_background(cell, "FFFDF9" if row_idx % 2 == 1 else "F5EFE3")
+            p = cell.paragraphs[0]
+            r = p.add_run(val)
+            r.font.size = Pt(8.5)
+            if col_idx == 0:
+                r.bold = True
+            r.font.color.rgb = COLOR_DARK
+
+    # ========================================================
+    # SECCIÓN 6: DIAGRAMAS DE FLUJO DE TAREAS (TASK FLOWS)
+    # ========================================================
+    add_h1("6. Diagramas de Flujo de Tareas (Task Flows / Wireflows)")
+    add_body(
+        "Como se establece en las diapositivas 50 a 56 de clase ('Planificar y definir pruebas - Flujo de tareas'), "
+        "el alcance de cada experiencia debe diagramarse identificando el punto de inicio, las pantallas, las decisiones "
+        "del usuario y los estados de salida. A continuación se presentan los diagramas de flujo de tareas para las 4 actividades de PlayBreak:"
     )
 
-    add_callout(
-        "«La mesa de dibujo me pareció muy chévere. Aunque sería genial que hubiera como un temporizador para que solo pudiera dibujar por un tiempo límite. "
-        "También sería chévere que hubieran tipos de dibujo es decir que hubiera dibujo libre y otro fuera el recomendado por el juego para que los demás adivinen "
-        "y que el juego permitiera identificar cuántas partidas ha ganado cada uno. En general la aplicación me parece muy intuitiva, chévere y de fácil uso.» "
-        "— Participante 1 (SUS: 95,0).",
-        "PULL QUOTE 2 · PROFUNDIDAD DEL JUEGO"
+    add_h2("6.1 Flujo 1: Mesa de Dibujo Sincrónica (Tiempo Real / P2P)")
+    add_body(
+        "[SALA PRINCIPAL]\n"
+        "   ↓ Clic en 'Entrar a dibujar'\n"
+        "[MESA DE DIBUJO · ESTADO INICIAL]\n"
+        "   ├─ Seleccionar Modo: ¿Adivinar palabra secreta o Dibujo Libre?\n"
+        "   ├─ Configurar Tiempo: 60s | 30s | Sin límite\n"
+        "   └─ Conexión Multijugador: Solitario | Simulación Bots | Sala P2P WebRTC\n"
+        "   ↓ Primer trazo en el lienzo\n"
+        "[INICIO AUTOMÁTICO DE CRONÓMETRO Y ADIVINANZAS]\n"
+        "   ├─ Chat en Vivo: Usuario escribe intento / Compañero P2P envía adivinanza\n"
+        "   ¿Palabra coincide con la secreta?\n"
+        "   ├─ NO: Intento visible en chat sin penalización ni bloqueo\n"
+        "   └─ SÍ: >> CORTE ESTRICTO DE LOOP << → Detener cronómetro → +10 pts marcador → Lluvia de confeti\n"
+        "   ↓ Clic en 'Terminar ronda y charlar'\n"
+        "[MOMENTO POST-PARTIDA: LA CAFETERÍA]\n"
+        "   ¿Qué desea hacer el usuario?\n"
+        "   ├─ [Seguir charlando]: Genera pregunta rompehielos afinada a gustos / Activa audio WebRTC\n"
+        "   ├─ [Jugar otra vez]: Retorna al lienzo con palabra nueva\n"
+        "   └─ [Salir sin avisar]: Cierra sesión silenciosamente con privacidad confirmada ('Ghosting amigable')",
+        bold_prefix="Estructura del Flujo 1: "
     )
 
-    add_callout(
-        "«Para la propuesta el componente estético y funcional es muy importante por lo cual expandiría el sistema cosméticamente, "
-        "funcionalmente y agregaría más minijuegos y formas de compartir espacios juntos pero la idea base es muy linda.» "
-        "— Participante 5 (SUS: 92,5).",
-        "PULL QUOTE 3 · EXPANSIÓN Y EXPERIENCIA SOCIAL"
+    add_h2("6.2 Flujo 2: Rincón de Palabras Asincrónico (Por Turnos)")
+    add_body(
+        "[SALA PRINCIPAL]\n"
+        "   ↓ Clic en 'Dejar jugada'\n"
+        "[RINCÓN DE PALABRAS]\n"
+        "   ├─ Carga la cadena acumulada (LocalStorage o compartida)\n"
+        "   └─ Extrae última letra de la palabra previa (Ej: 'ALEGRÍA' → requiere 'A')\n"
+        "   ↓ Usuario escribe palabra en el campo\n"
+        "¿Cumple las validaciones del sistema?\n"
+        "   ├─ ¿Menos de 2 letras? → Error amable: 'Mínimo 2 letras'\n"
+        "   ├─ ¿Ya fue usada en la cadena? → Error de prevención: '«PALABRA» ya fue usada, piensa en una nueva'\n"
+        "   ├─ ¿Empieza con letra incorrecta? → Error explicativo: 'Debe empezar con «A» (última de «ALEGRÍA»)'\n"
+        "   └─ VÁLIDA: Agrega a la cadena con autor y marca de tiempo → Confeti → Desbloquea logro si >=3 aportes\n"
+        "   ↓ Salida voluntaria\n"
+        "[RETORNO A LA SALA PRINCIPAL]",
+        bold_prefix="Estructura del Flujo 2: "
+    )
+
+    add_h2("6.3 Flujo 3: Trivia Relámpago Gamificada (Minijuego Rápido)")
+    add_body(
+        "[SALA PRINCIPAL]\n"
+        "   ↓ Clic en 'Jugar trivia'\n"
+        "[TRIVIA RELÁMPAGO: RONDA DE 5 PREGUNTAS]\n"
+        "   ├─ Carga 5 preguntas aleatorias del banco (hábitos, café, cultura y bienestar)\n"
+        "   ├─ Inicia cronómetro de 15 segundos por pregunta\n"
+        "¿Usuario responde antes de 15 segundos?\n"
+        "   ├─ Tiempo agotado: Racha vuelve a 0 → Muestra respuesta correcta y dato curioso → Avanza\n"
+        "   ├─ Respuesta incorrecta: Botón rojo → Muestra solución → Avanza\n"
+        "   └─ Respuesta correcta: +100 pts (+25 pts si racha > 1) → Confeti → Avanza\n"
+        "   ↓ Al completar las 5 preguntas\n"
+        "[PANTALLA DE RECOMPENSAS Y MEDALLAS]\n"
+        "   ├─ Puntaje >= 400 pts: 🏆 Medalla de Oro (Maestro del Break) + Insignia desbloqueada\n"
+        "   ├─ Puntaje >= 200 pts: 🥈 Medalla de Plata (Experto en Pausas) + Insignia desbloqueada\n"
+        "   └─ Puntaje < 200 pts:  🥉 Medalla de Bronce (Buen intento de bienestar)\n"
+        "   ↓ Opciones: Jugar otra ronda | Ir a Cafetería | Volver a la sala",
+        bold_prefix="Estructura del Flujo 3: "
+    )
+
+    add_h2("6.4 Flujo 4: La Cafetería & El Pasillo (Social de Baja Fricción)")
+    add_body(
+        "[ACCESO DESDE POST-PARTIDA O MENÚ PRINCIPAL]\n"
+        "   ↓\n"
+        "[LA CAFETERÍA / EL PASILLO]\n"
+        "   ├─ Algoritmo de afinidad: Filtra preguntas rompehielos según etiquetas de Tu Rincón (Cine, Café, Juegos)\n"
+        "   ├─ Módulo de Audio WebRTC: Botón para conectar micrófono en tiempo real con compañeros P2P\n"
+        "   ├─ Síntesis de voz: Botón para escuchar al compañero virtual hablar mediante Web Speech API\n"
+        "   └─ Muro de notas breves: Publicación de mensajes cortos y reacciones emoji (☕, 🍪, 👏)\n"
+        "   ↓ Salida en cualquier momento\n"
+        "[SALIDA SIN AVISAR CON CONFIRMACIÓN DE PRIVACIDAD]",
+        bold_prefix="Estructura del Flujo 4: "
     )
 
     # ========================================================
-    # SECCIÓN 5: LECTURA CRÍTICA Y CLASIFICACIÓN DE EVIDENCIA
+    # SECCIÓN 7: HISTORIAS DE USUARIO PRIORIZADAS (MOSCOW)
     # ========================================================
-    add_h1("5. Lectura Crítica de Hallazgos y Validación de Hipótesis")
+    add_h1("7. Historias de Usuario Priorizadas (Metodología MoSCoW)")
     add_body(
-        "Para mantener el rigor académico exigido por el cuerpo docente, las conclusiones del estudio se clasifican según la firmeza "
-        "metodológica de la evidencia recopilada:"
-    )
-
-    add_h2("5.1 Evidencia Fuerte (Hallazgos Probados y Concluyentes)")
-    add_body(
-        "El puntaje SUS de 32,5 del Participante 2 coincidió milimétricamente con un defecto identificable en el código: "
-        "el prototipo v1 mostraba tres avatares fijos como si ya estuvieran en la sala. El usuario novato no supo si estaba interactuando "
-        "con humanos reales o con una maqueta inerte. La usabilidad del lienzo en sí no falló; falló la transparencia de su estado.",
-        bold_prefix="1. El problema principal es de claridad inicial y no de complejidad interactiva: "
-    )
-    add_body(
-        "Con un promedio de 4,8 sobre 5,0 (ítem 9), ningún participante sintió intimidación, invasión a su agenda ni presión por ganar. "
-        "La posibilidad de salir sin avisar ('ghosting amigable') fue unánimemente respetada y elogiada.",
-        bold_prefix="2. El principio de voluntariedad ('Aquí nada es obligatorio') es un éxito rotundo: "
-    )
-
-    add_h2("5.2 Evidencia Media (Tendencias Claras a Atender)")
-    add_body(
-        "Las tres solicitudes del Participante 1 (tiempo límite, dibujo libre vs. sugerido, marcador de partidas) son altamente coherentes "
-        "y enriquecen la gamificación sin destruir la simplicidad. Se clasifican como evidencia media porque proceden de un solo usuario, "
-        "pero su viabilidad técnica es inmediata.",
-        bold_prefix="1. Necesidad de flexibilidad en la Mesa de Dibujo: "
-    )
-
-    add_h2("5.3 Hipótesis a Validar en Próximas Iteraciones")
-    add_body(
-        "Los usuarios que tuvieron una experiencia óptima pidieron más funciones (trivia, puzzles, cosmética). "
-        "Sin embargo, sobrecargar la interfaz podría atentar contra la baja fricción y el primer contacto que confundió al Participante 2. "
-        "La hipótesis a comprobar es si un balance minimalista con módulos opcionales satisface a ambos perfiles.",
-        bold_prefix="1. Tensión entre profundidad lúdica y minimalismo de baja fricción: "
-    )
-    add_body(
-        "El instrumento SUS evalúa usabilidad percibida, pero no mide si la aplicación efectivamente reduce el sentimiento de soledad "
-        "en una jornada laboral de ocho horas. Esto requerirá pruebas longitudinales de campo.",
-        bold_prefix="2. Impacto real sobre el aislamiento laboral: "
-    )
-
-    # ========================================================
-    # SECCIÓN 6: HISTORIAS DE USUARIO Y PRIORIZACIÓN MOSCOW
-    # ========================================================
-    add_h1("6. Historias de Usuario Priorizadas (Metodología MoSCoW)")
-    add_body(
-        "Para guiar la fase de implementación del prototipo definitivo, cada cambio de diseño se tradujo a Historias de Usuario "
-        "centradas en la persona arquetípica Juliana Ospina (Entregable 3). Se priorizaron utilizando la técnica MoSCoW "
-        "(Must Have, Should Have, Could Have, Won't Have) y se acompañaron de Criterios de Aceptación en formato Gherkin:"
+        "Cada requerimiento se modeló con la persona arquetípica Juliana Ospina (Entregable 3), "
+        "priorizado mediante MoSCoW y con criterios de aceptación en formato Gherkin (Dado-Cuando-Entonces):"
     )
 
     hu_data = [
-        ("HU-1", "Como Juliana, quiero que la partida empiece de cero mostrando únicamente mi presencia ('Tú'), para entender qué está ocurriendo sin confundirme con personas ficticias.", "Dado que ingreso a la sala de descanso, cuando abro cualquier rincón lúdico, entonces veo únicamente mi avatar y un mensaje claro de que la sala está limpia.", "Must Have"),
-        ("HU-2", "Como Juliana, quiero ingresar a un juego en un solo clic desde la pantalla principal, para no requerir asistencia técnica ni memorizar instrucciones previas.", "Dado que estoy en la sala principal, cuando hago clic en 'Mesa de Dibujo', entonces la herramienta se carga inmediatamente sin diálogos de configuración obligatorios.", "Must Have"),
-        ("HU-3", "Como Juliana, quiero dibujar en un lienzo interactivo real con mouse o dedo, para que la experiencia sea lúdica y tangible.", "Dado que estoy en la Mesa de Dibujo, cuando trazo sobre el lienzo, entonces la línea se dibuja de forma fluida con el color seleccionado y se puede deshacer o borrar.", "Must Have"),
-        ("HU-4", "Como Juliana, quiero poder activar un tiempo límite opcional (60s, 30s o sin límite), para que la partida sea breve y no consuma más tiempo de mi pausa activa.", "Dado que estoy en la Mesa de Dibujo, cuando toco el selector de tiempo, entonces el temporizador cambia y se inicia automáticamente al detectar el primer trazo en el lienzo.", "Should Have"),
-        ("HU-5", "Como Juliana, quiero elegir entre adivinar una palabra secreta con pistas o dibujar libremente, para tener un tema sobre el cual reír con mis compañeros o simplemente garabatear.", "Dado que estoy en la Mesa de Dibujo, cuando alterno el modo de juego, entonces el sistema me entrega una palabra del banco con pistas o habilita el lienzo completamente libre.", "Should Have"),
-        ("HU-6", "Como Juliana, quiero que el Rincón de Palabras valide automáticamente la cadena asincrónica (última letra = primera letra), para no depender de moderadores ni supervisores.", "Dado que escribo una palabra, cuando la envío, entonces el sistema valida la regla de la última letra y la agrega a la cadena persistente con mi nombre y marca de tiempo.", "Must Have"),
-        ("HU-7", "Como Juliana, quiero salir de la sala en cualquier momento sin que nadie reciba una notificación acusatoria, para sentir autonomía y cero presión social.", "Dado que estoy en cualquier rincón o en la pantalla post-partida, cuando elijo 'Salir sin avisar', entonces regreso a la sala principal con un mensaje tranquilizador de privacidad.", "Must Have"),
-        ("HU-8", "Como Juliana, quiero ver un marcador de partidas ganadas durante la sesión, para tener un estímulo amistoso con mis compañeros si decidimos competir.", "Dado que se adivina una palabra en el chat, cuando el sistema detecta el acierto, entonces lanza confeti festivo y suma 10 puntos al marcador del participante en la sesión.", "Could Have"),
-        ("HU-9", "Como Juliana, quiero disponer de minijuegos adicionales rápidos como Trivia Relámpago y personalizar mi avatar, para encontrar mayor variedad en mis pausas.", "Dado que estoy en la sala, cuando elijo 'Trivia Relámpago', entonces juego una ronda de 3 preguntas de 45 segundos orientadas a gustos y hábitos de trabajo.", "Could Have")
+        ("HU-1", "Como Juliana, quiero que la sala inicie limpia solo con mi presencia ('Tú'), para no confundirme con participantes ficticios.", "Dado que abro la app, cuando ingreso a cualquier sala, entonces solo veo mi avatar sin bots forzados.", "Must Have"),
+        ("HU-2", "Como Juliana, quiero entrar a cualquier juego en un solo clic, para no requerir manuales ni asistencia técnica.", "Dado que estoy en la sala principal, cuando toco una tarjeta, entonces el juego abre inmediatamente.", "Must Have"),
+        ("HU-3", "Como Juliana, quiero dibujar en un lienzo interactivo real con mouse o dedo, para una experiencia lúdica tangible.", "Dado que estoy en la Mesa de Dibujo, cuando trazo, entonces la línea responde fluidamente con el color y grosor elegido.", "Must Have"),
+        ("HU-4", "Como Juliana, quiero poder limitar el tiempo de la partida (60s, 30s o libre), para controlar la duración de mi descanso.", "Dado que elijo un límite de tiempo, cuando hago el primer trazo, entonces el cronómetro inicia automáticamente.", "Should Have"),
+        ("HU-5", "Como Juliana, quiero que el sistema valide que no se repitan palabras en la cadena, para mantener el juego fresco y desafiante.", "Dado que envío una palabra, cuando ya existe en la cadena previa, entonces el sistema la rechaza amablemente indicándolo.", "Must Have"),
+        ("HU-6", "Como Juliana, quiero que la adivinanza en vivo corte estrictamente el loop de victoria, para no recibir puntos anómalos.", "Dado que se adivina la palabra, cuando el sistema detecta el acierto, entonces suma 10 pts una sola vez y no repite el evento.", "Must Have"),
+        ("HU-7", "Como Juliana, quiero jugar una Trivia gamificada con cronómetro y medallas, para tener variedad y sentir que gano algo.", "Dado que juego trivia, cuando respondo 5 preguntas en menos de 15s, entonces gano puntos, racha y medallas de bienestar.", "Should Have"),
+        ("HU-8", "Como Juliana, quiero poder activar chat de voz en la cafetería, para charlar con mis compañeros si ambos lo deseamos.", "Dado que estoy en La Cafetería, cuando pulso conectar voz, entonces el micrófono transmite por WebRTC con indicador visual.", "Could Have"),
+        ("HU-9", "Como Juliana, quiero que mi perfil configure intereses y desbloquee logros, para que la app se adapte a mí y tenga utilidad.", "Dado que elijo tags y gano partidas, cuando guardo perfil, entonces veo insignias desbloqueadas y preguntas afines.", "Should Have"),
+        ("HU-10", "Como Juliana, quiero salir sin avisar en cualquier instante, para no sentir culpa ni compromiso social forzado.", "Dado que toco 'Salir sin avisar', cuando salgo, entonces vuelvo a la sala con notificación de privacidad confirmada.", "Must Have")
     ]
 
     t4 = doc.add_table(rows=len(hu_data) + 1, cols=4)
@@ -545,39 +506,36 @@ def create_document():
             r.font.color.rgb = COLOR_DARK
 
     # ========================================================
-    # SECCIÓN 7: MATRIZ DE CAMBIOS IMPLEMENTADOS
+    # SECCIÓN 8: MATRIZ DE CAMBIOS IMPLEMENTADOS (V1 VS V4.0)
     # ========================================================
-    add_h1("7. Matriz de Cambios Implementados (Versión v1 frente a v3 y v3.5)")
+    add_h1("8. Matriz de Cambios Implementados (Versión v1 frente a v4.0)")
     add_body(
-        "A continuación se sintetiza la trazabilidad directa entre los hallazgos de usabilidad y los cambios de ingeniería "
-        "efectuados en el código de producción que se entrega para GitHub Pages:"
+        "A continuación se presenta la trazabilidad completa entre los hallazgos de usabilidad y los cambios de ingeniería "
+        "desplegados en la versión de producción v4.0 disponible en GitHub Pages:"
     )
 
     changes_data = [
-        ("Jugadores en sala", "Sara, Tomás y Lucía fijos en el código HTML.", "Se inicia exclusivamente con 'Tú'. Sala limpia.", "Se mantiene limpio y se añade un toggle transparente de 'Compañeros virtuales' para pruebas individuales.", "R2 (SUS 32,5)"),
-        ("Salas inactivas", "Mostraba Trivia y Puzzle con aviso 'no disponible'.", "Eliminadas del mapa para evitar frustración.", "Se rescató Trivia Relámpago como minijuego funcional de 45 segundos (HU-9).", "Ítems 4 y 10 SUS"),
-        ("Lienzo de dibujo", "Simulación estática de dibujo predefinido.", "Lienzo interactivo real (mouse y touch).", "Lienzo completo con 8 colores, 3 grosores, borrador, deshacer y descarga PNG.", "R1 y Tarea 1"),
-        ("Temporizador", "No existía temporizador en la partida.", "Temporizador de 60s, 30s o sin límite.", "Temporizador con aviso sonoro sutil y cambio de color cuando resta menos de 10s.", "R1 (Cita textual)"),
-        ("Modos de dibujo", "Solo se mostraba un tema fijo.", "Selector de tema con opción 'Dibujo libre'.", "Modo adivinar con palabra secreta y pistas vs. Modo dibujo libre creativo.", "R1 (Cita textual)"),
-        ("Adivinanza en chat", "No existía interactividad de adivinar.", "No contemplado en v3 básica.", "Chat en tiempo real que valida palabras, confeti dinámico y suma de puntos.", "R1 y R5"),
-        ("Marcador de puntos", "Inexistente.", "No implementado en v3 para no fomentar competencia.", "Marcador ligero opcional de sesión que premia aciertos sin castigar derrotas.", "R1 (Cita textual)"),
-        ("Rincón de palabras", "Tres palabras previas forzadas.", "Cadena inicia vacía con instrucciones.", "Cadena asincrónica persistente en LocalStorage con marcas de tiempo relativo.", "R2 y HU-6"),
-        ("Pregunta rompehielos", "Texto fijo ('a Tomás le gusta el cine').", "Pregunta aleatoria al tocar 'Seguir charlando'.", "Generador interactivo de preguntas rompehielos post-partida con botón de recarga.", "R2 y Hallazgo 2"),
-        ("Salida silenciosa", "Botón 'Salir sin avisar' presente.", "Se mantiene con mensaje de privacidad.", "Reforzado con feedback tranquilizador ('Saliste en silencio, nadie fue notificado').", "Ítem 9 SUS (4,8)"),
-        ("Personalización", "Formulario extenso con juegos preferidos.", "Perfil recortado centrado en avatar y modo.", "Avatar interactivo, nube de intereses, modos de juego y contador de pausas.", "R5 y HU-9"),
-        ("Diseño visual y accesibilidad", "Estilo crema básico.", "Diseño minimalista compacto (22 KB).", "Diseño responsivo móvil/desktop, paleta 60-30-10, modo noche y audio Web Audio API.", "R5 (Estética expandida)")
+        ("Jugadores en sala", "Sara, Tomás y Lucía fijos en el código HTML.", "Sala limpia solo con 'Tú' + toggle transparente de simulación opcional.", "R2 (SUS: 32,5)"),
+        ("Lienzo de dibujo", "Simulación estática de dibujo predefinido.", "Lienzo reactivo: 8 colores, 3 grosores, borrador, deshacer y descarga PNG.", "R1 y Tarea 1"),
+        ("Temporizador", "Inexistente.", "Temporizador configurable (60s, 30s, libre) que inicia al primer trazo en lienzo.", "R1 (Cita textual)"),
+        ("Adivinanza y Marcador", "Inexistente.", "Chat en tiempo real, detección de palabra, confeti y marcador de sesión con corte de loop.", "R1 y Hallazgo P2P"),
+        ("Rincón de palabras", "3 palabras precargadas fijas sin validación.", "Cadena asincrónica persistente con regla de última letra y validación de NO duplicados.", "R2 y Feedback usuario"),
+        ("Trivia Relámpago", "Estática con aviso 'no disponible'.", "Minijuego gamificado: 18 preguntas, 15s de límite, rachas (+25 pts) y medallas Oro/Plata/Bronce.", "R5 y Feedback usuario"),
+        ("La Cafetería (Post-juego)", "Texto fijo y preguntas predefinidas.", "Preguntas rompehielos afinadas a tags del perfil + chat de voz WebRTC y síntesis de voz.", "Feedback usuario"),
+        ("Tu Rincón (Perfil)", "Formulario largo decorativo.", "Perfil con impacto real: personaliza rompehielos, añade barra de niveles y 4 insignias desbloqueables.", "Feedback usuario"),
+        ("Salida silenciosa", "Botón presente sin confirmación.", "Salida sin culpa con toast tranquilizador de privacidad ('Nadie fue notificado').", "Ítem 9 SUS (4,8/5,0)")
     ]
 
-    t5 = doc.add_table(rows=len(changes_data) + 1, cols=5)
+    t5 = doc.add_table(rows=len(changes_data) + 1, cols=4)
     t5.alignment = WD_TABLE_ALIGNMENT.CENTER
-    headers_t5 = ["Componente", "Prototipo v1 (Evaluado)", "Versión v3 (Minimalista)", "Versión v3.5 (Producción Final)", "Origen del Cambio"]
+    headers_t5 = ["Componente", "Prototipo v1 (Evaluado)", "Versión v4.0 (Implementación Final)", "Justificación UX"]
     for col_idx, text in enumerate(headers_t5):
         cell = t5.cell(0, col_idx)
         set_cell_background(cell, "7A4E2D")
         p = cell.paragraphs[0]
         r = p.add_run(text)
         r.bold = True
-        r.font.size = Pt(9)
+        r.font.size = Pt(9.5)
         r.font.color.rgb = RGBColor(255, 255, 255)
 
     for row_idx, crow in enumerate(changes_data, start=1):
@@ -586,153 +544,344 @@ def create_document():
             set_cell_background(cell, "FFFDF9" if row_idx % 2 == 1 else "F5EFE3")
             p = cell.paragraphs[0]
             r = p.add_run(val)
-            r.font.size = Pt(8)
+            r.font.size = Pt(8.5)
             if col_idx == 0:
                 r.bold = True
             r.font.color.rgb = COLOR_DARK
 
     # ========================================================
-    # SECCIÓN 8: CUMPLIMIENTO DE HEURÍSTICAS DE NIELSEN
+    # SECCIÓN 9: CUMPLIMIENTO DE HEURÍSTICAS DE NIELSEN
     # ========================================================
-    add_h1("8. Evaluación de Cumplimiento de las 10 Heurísticas de Usabilidad de Nielsen")
-    add_body(
-        "La versión final implementada resuelve sistemáticamente las 10 heurísticas de usabilidad de Jakob Nielsen:"
-    )
-
+    add_h1("9. Cumplimiento de las 10 Heurísticas de Usabilidad de Jakob Nielsen")
     heuristics = [
-        ("1. Visibilidad del estado del sistema: ", "El temporizador refleja exactamente los segundos restantes con cambio de color y animación sutil a menos de 10s. Las notificaciones toast y el estado de la sala ('Espacio Abierto') mantienen al usuario siempre informado."),
-        ("2. Coincidencia entre el sistema y el mundo real: ", "Se adoptan metáforas cálidas y comprensibles de la vida diaria: la 'Sala de Descanso', la 'Cafetería post-partida', la 'Mesa de dibujo' y la pausa de café, evitando jerga técnica o términos de videojuego complejo."),
-        ("3. Control y libertad del usuario: ", "El usuario dispone de botones explícitos de 'Deshacer trazo' (Undo), 'Borrar lienzo', selector de tiempo sin límite, y la opción 'Salir sin avisar' que permite retirarse sin consecuencias sociales ni alertas."),
-        ("4. Consistencia y estándares: ", "Se aplica estrictamente el sistema de color 60-30-10, jerarquía visual de tres niveles de botón (café primario, arena secundario, contorno terciario), cuadrícula base-8 y convenciones universales de interfaz web."),
-        ("5. Prevención de errores: ", "En el Rincón de Palabras, el sistema indica previamente la letra requerida y valida en tiempo real antes de enviar. En la adivinanza, normaliza tildes y mayúsculas para evitar frustraciones por diferencias ortográficas."),
-        ("6. Reconocimiento antes que recuerdo: ", "Las pistas de la palabra secreta, la última letra encadenada y los avatares participantes están siempre visibles en pantalla, reduciendo la carga cognitiva a cero."),
-        ("7. Flexibilidad y eficiencia de uso: ", "Soporte para dos modalidades de teletrabajo: sincrónica en vivo para quienes coinciden en descanso, y asincrónica por turnos para quienes tienen agendas incompatibles. Selector de tema claro y café nocturno."),
-        ("8. Diseño estético y minimalista: ", "Se eliminó todo elemento superfluo. Cada pantalla contiene una única acción destacada, tipografía clara (Fredoka y Nunito) y generoso espacio negativo."),
-        ("9. Ayuda a reconocer, diagnosticar y recuperarse de errores: ", "Los mensajes de validación son comprensibles, cercanos y explican exactamente la solución (ej.: 'Tiene que empezar con «A» (la última de «energía»)')."),
-        ("10. Ayuda y documentación: ", "La barra lateral incluye la filosofía de uso ('Aquí nada es obligatorio'), las salas presentan subtítulos autoexplicativos y se ofrece un diálogo para invitar compañeros.")
+        ("1. Visibilidad del estado del sistema: ", "Temporizadores en dibujo y trivia con avisos visuales; indicador de conexión WebRTC; notificaciones toast suaves."),
+        ("2. Coincidencia con el mundo real: ", "Metáforas familiares de bienestar: 'Sala de descanso', 'La Cafetería', 'El Pasillo', 'Pausa de café'."),
+        ("3. Control y libertad del usuario: ", "Botones de deshacer trazo, selector de tiempo libre, reiniciar datos y salida libre sin avisar ('ghosting amigable')."),
+        ("4. Consistencia y estándares: ", "Paleta 60-30-10, jerarquía visual de botones, retícula base-8 y cuadrícula de componentes predecibles."),
+        ("5. Prevención de errores: ", "Validación de letra y duplicados en palabras antes de enviar; normalización ortográfica en adivinanzas."),
+        ("6. Reconocimiento antes que recuerdo: ", "Pistas de palabras, letra requerida y avatares participantes siempre visibles en el viewport."),
+        ("7. Flexibilidad y eficiencia de uso: ", "Modos sincrónicos (dibujo/trivia) y asincrónicos (palabras/pasillo); soporte para teclado, mouse y pantallas táctiles."),
+        ("8. Diseño estético y minimalista: ", "Eliminación de ruido visual; tipografías cálidas (Fredoka y Nunito) y generoso espacio en blanco."),
+        ("9. Recuperación ante errores: ", "Mensajes explicativos y cercanos indicando la solución exacta sin culpar al usuario."),
+        ("10. Ayuda y documentación: ", "Guías desplegables en cada actividad explicando reglas lúdicas y recordatorio: 'Aquí nada es obligatorio'.")
     ]
-
     for title, desc in heuristics:
         add_body(desc, bold_prefix=title)
 
     # ========================================================
-    # SECCIÓN 9: ESPECIFICACIÓN TÉCNICA Y SISTEMA DE DISEÑO
+    # SECCIÓN 10: CONCLUSIONES Y REFERENCIAS
     # ========================================================
-    add_h1("9. Especificación Técnica y Sistema de Diseño Atómico")
-
-    add_h2("9.1 Wireflows de los Flujos Principales")
+    add_h1("10. Conclusiones")
     add_body(
-        "Flujo Sincrónico (Camino Feliz): Sala Principal → Mesa de Dibujo (modo adivinanza/libre con solo 'Tú') → Trazo interactivo (inicio automático del cronómetro) → Adivinanza en chat / Clic en 'Terminar ronda' → Pantalla Post-Partida ('La Cafetería') → Selección entre 'Seguir charlando' (pregunta rompehielos), 'Jugar otra vez' o 'Salir sin avisar'.",
-        bold_prefix="• Flujo 1 (Mesa de Dibujo): "
+        "1. La evaluación estandarizada SUS demostró la viabilidad del concepto de pausas activas voluntarias para teletrabajo "
+        "(mediana de 92,5 y sensación de seguridad de 4,8 sobre 5,0)."
     )
     add_body(
-        "Flujo Asincrónico (Camino Feliz): Sala Principal → Rincón de Palabras (visualización de la cadena previa con autor y hora) → Lectura de la letra requerida → Redacción de palabra → Clic en 'Dejar mi jugada' → Animación de confeti, guardado en LocalStorage y confirmación → Retorno a la sala.",
-        bold_prefix="• Flujo 2 (Rincón de Palabras): "
+        "2. El análisis riguroso de la dispersión permitió transformar el caso crítico del P2 (32,5) en una mejora estructural: "
+        "la partida limpia de cero y la transparencia de las funciones."
     )
     add_body(
-        "Flujos de Recuperación de Error: (a) Si la palabra no empieza con la letra correcta: campo con borde suave y mensaje explicativo sin recargar la página. (b) Si el tiempo expira en dibujo: el lienzo se bloquea amablemente invitando a terminar la ronda.",
-        bold_prefix="• Flujos de Contingencia: "
+        "3. La versión v4.0 implementada y desplegada en GitHub Pages responde a la totalidad de peticiones cualitativas y requerimientos técnicos: "
+        "multijugador P2P WebRTC, prevención de palabras duplicadas, trivia gamificada con medallas tangibles, chat de voz en cafetería y perfil con impacto interactivo."
     )
 
-    add_h2("9.2 Sistema de Diseño Atómico")
-    add_body(
-        "Colores: Crema #F5EFE3 (60% fondo), Arena #EBDDC2 y Salvia #5F9E82 (30% tarjetas y estados), Café #7A4E2D (10% acciones clave). "
-        "Tipografía: Fredoka (encabezados) y Nunito (cuerpo). Espaciado: retícula base 8 (4, 8, 16, 24, 32, 48 px). Radios: 6, 12, 20 y píldora 9999 px.",
-        bold_prefix="• Átomos: "
-    )
-    add_body(
-        "Botones (.btn primario, .btn.light secundario, .btn.alt terciario), pastillas (.status-pill, .proto-pill), avatar circular con expresión, "
-        "paleta de colores del lienzo, tarjetas de sala y campos de formulario con validación.",
-        bold_prefix="• Moléculas: "
-    )
-    add_body(
-        "Lienzo interactivo con barra superior de tiempo y herramientas, caja de chat de adivinanzas con marcador en vivo, cadena de palabras, "
-        "modal de invitación y barra lateral de navegación persistente.",
-        bold_prefix="• Organismos: "
-    )
-    add_body(
-        "Plantilla centrada de una columna (max-width: 760px) sobre fondo cálido degradado, adaptable con menú inferior en dispositivos móviles.",
-        bold_prefix="• Plantillas y Páginas: "
-    )
-
-    # ========================================================
-    # SECCIÓN 10: PLAN PARA LA PRÓXIMA RONDA DE PRUEBAS
-    # ========================================================
-    add_h1("10. Protocolo y Plan para la Próxima Ronda de Pruebas")
-    add_body(
-        "Para validar las mejoras implementadas y superar las limitaciones intrínsecas de un cuestionario SUS no presencial, "
-        "se establece el siguiente plan de pruebas para la siguiente fase:"
-    )
-    add_body(
-        "Reclutar entre 6 y 8 profesionales que trabajen en equipos distribuidos reales, balanceando usuarios que lleven menos de 3 meses "
-        "en sus empresas (segmento crítico para rompehielos) con trabajadores consolidados.",
-        bold_prefix="1. Muestra objetivo ampliada: "
-    )
-    add_body(
-        "Medición del tiempo en tarea (Time-on-Task) para iniciar un dibujo y dejar una palabra, tasa de éxito en el primer intento "
-        "y frecuencia de dudas sobre el estado de otros jugadores.",
-        bold_prefix="2. Métricas objetivas de desempeño: "
-    )
-    add_body(
-        'Cuestionario complementario con escala Likert y preguntas cualitativas profundas: "¿Sientes que esta dinámica te otorgó un tema espontáneo '
-        'para conversar con un compañero?", "¿Sentiste alguna obligación o compromiso forzado al usarlo?", "¿Preferirías jugar solo o con colegas?".',
-        bold_prefix="3. Validación del impacto psicológico y social: "
-    )
-
-    # ========================================================
-    # SECCIÓN 11: CONCLUSIONES
-    # ========================================================
-    add_h1("11. Conclusiones")
-    add_body(
-        "1. La evaluación estandarizada SUS evidenció que PlayBreak posee una sólida base de usabilidad y alta deseabilidad "
-        "(mediana de 92,5 y sensación de seguridad de 4,8 sobre 5,0), validando que las dinámicas lúdicas no invasivas son bien recibidas "
-        "como pausas activas en el contexto del teletrabajo."
-    )
-    add_body(
-        "2. El análisis riguroso de la muestra permitió desmitificar los datos agregados: el promedio de 77,5 escondía un problema crítico de "
-        "onboarding reportado por el Participante 2. Al suprimir los jugadores simulados confusos y garantizar una partida limpia de cero, "
-        "el sistema elevó drásticamente su transparencia."
-    )
-    add_body(
-        "3. La versión implementada para producción (v3.5) cumple con todas las historias de usuario de alta prioridad (MoSCoW), integrando "
-        "el temporizador opcional, los modos de dibujo (palabra secreta con pistas y dibujo libre), el marcador de victorias, la cadena asincrónica persistente "
-        "y el minijuego de trivia rápida, todo empaquetado bajo un sistema de diseño armónico (regla 60-30-10) y optimizado para publicación en GitHub Pages."
-    )
-
-    # ========================================================
-    # SECCIÓN 12: REFERENCIAS BIBLIOGRÁFICAS
-    # ========================================================
-    add_h1("12. Referencias Bibliográficas")
+    add_h1("11. Referencias Bibliográficas")
     refs = [
         "Bangor, A., Kortum, P. T., & Miller, J. T. (2008). An empirical evaluation of the system usability scale. International Journal of Human-Computer Interaction, 24(6), 574-594.",
-        "Brooke, J. (1986). SUS: A 'quick and dirty' usability scale. In P. W. Jordan, B. Thomas, B. A. Weerdmeester, & A. L. McClelland (Eds.), Usability Evaluation in Industry (pp. 189-194). London: Taylor & Francis.",
-        "Lewis, J. R., & Sauro, J. (2009). The factor structure of the system usability scale. In International Conference on Human Centered Design (pp. 94-103). Springer, Berlin, Heidelberg.",
+        "Brooke, J. (1986). SUS: A 'quick and dirty' usability scale. In Usability Evaluation in Industry (pp. 189-194). London: Taylor & Francis.",
+        "Lewis, J. R., & Sauro, J. (2009). The factor structure of the system usability scale. In International Conference on Human Centered Design (pp. 94-103). Springer.",
         "Nielsen, J. (1994). Enhancing the explanatory power of usability heuristics. In Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (pp. 152-158). ACM.",
-        "Nielsen, J., & Landauer, T. K. (1993). A mathematical model of the finding of usability problems. In Proceedings of the INTERACT'93 and CHI'93 Conference on Human Factors in Computing Systems (pp. 206-213). ACM.",
+        "Nielsen, J., & Landauer, T. K. (1993). A mathematical model of the finding of usability problems. In Proceedings of the INTERACT'93 and CHI'93 Conference (pp. 206-213). ACM.",
         "Sauro, J. (2011). A Practical Guide to the System Usability Scale: Background, Benchmarks & Best Practices. Measuring Usability LLC."
     ]
     for r in refs:
         p = doc.add_paragraph()
-        p.paragraph_format.left_indent = Inches(0.3)
-        p.paragraph_format.first_line_indent = Inches(-0.3)
-        p.paragraph_format.space_after = Pt(4)
+        p.paragraph_format.left_indent = Inches(0.25)
+        p.paragraph_format.first_line_indent = Inches(-0.25)
+        p.paragraph_format.space_after = Pt(3)
         run = p.add_run(r)
-        run.font.size = Pt(9.5)
+        run.font.size = Pt(9)
         run.font.color.rgb = COLOR_DARK
 
     return doc
 
+def generate_markdown():
+    """Genera la versión Markdown completa y alineada de Entregable 6."""
+    md_content = """# Entregable 6: Evaluación del Prototipo PlayBreak, Diagramas de Flujo de Tareas y Plan de Implementación
+
+**Universidad Nacional de Colombia — Facultad de Minas — Sede Medellín**  
+**Departamento de Ciencias de la Computación y de la Decisión**  
+**Interacción Humano-Computador (IHC)**  
+**Grupo #7:**
+- Edgar Fernando Vega Morales
+- Hinara Pastora Sanchez Mata
+- Jacobo Zapata Rojas
+- Vincent David Restrepo Tangarife
+
+**Semestre Académico 2025-1 / Febrero - Octubre 2026**  
+**Medellín, Antioquia, Colombia**
+
+---
+
+## 1. Hoja Resumen Ejecutiva (*Executive Summary Sheet*)
+
+| Aspecto | Resumen Ejecutivo de la Evaluación y Rediseño |
+| :--- | :--- |
+| **Propósito y Alcance** | Evaluar la usabilidad y adopción de PlayBreak como plataforma de micro-pausas activas no invasivas para mitigar la fatiga virtual y el aislamiento en equipos remotos. Se evaluaron 4 flujos principales con 5 participantes bajo protocolo *Think-Aloud*. |
+| **Población y Muestra** | 5 participantes ($n = 5$) representativos de la persona arquetípica Juliana Ospina (profesionales de teletrabajo/híbrido). Prueba moderada con protocolo *Think-Aloud* y cuestionario estandarizado SUS. |
+| **Métricas SUS Consolidadas** | • **Promedio SUS**: **77,5 / 100** (Grado B+ / Aceptable - Buena según Bangor et al., 2008)<br>• **Mediana SUS**: **92,5 / 100** (Grado A+ / Rango de Excelencia)<br>• **Sensación de Seguridad (Ítem 9)**: **4,8 / 5,0** (Máxima puntuación: valida cero presión social)<br>• **Fricción Inicial (Ítem 4)**: **2,2 / 5,0** (Punto débil corregido: desconcierto en onboarding) |
+| **Gráfico Semáforo Consolidado** | 🟢 **Verde (Excelente)**: Mesa de Dibujo, Momento Post-Partida, Salida Silenciosa, Ausencia de Presión.<br>🟡 **Amarillo (Fricción Menor)**: Petición de temporizador, modos de juego y variedad lúdica.<br>🔴 **Rojo (Crítico en v1)**: Jugadores hardcodeados en código que confundieron al P2 (SUS: 32,5). |
+| **Top 3 Hallazgos Críticos** | 1. **Onboarding confuso por bots ficticios fijos** (*Severidad 3: Mayor* -> Resuelto con partida limpia de cero).<br>2. **Necesidad de control en dibujo** (*Severidad 2: Menor* -> Resuelto con selector 60s/30s/libre y modos adivinar/libre).<br>3. **Deseo de mayor variedad e interacción** (*Severidad 1: Cosmético* -> Resuelto con Trivia de 18 preguntas con medallas, El Pasillo y chat de voz WebRTC en Cafetería). |
+| **Estado de Implementación** | **Versión v4.0 completa desplegada en GitHub Pages**: Lienzo reactivo P2P WebRTC, prevención de palabras duplicadas, trivia con temporizador de 15s y medallas, chat de voz en tiempo real y perfil con niveles e insignias. |
+
+---
+
+## 2. Marco Metodológico de la Evaluación con Usuarios
+
+Siguiendo los lineamientos metodológicos de la asignatura (*«Planificar y definir pruebas»* y *«Analizar los resultados»*):
+
+### 2.1 Tamaño de Muestra y Representatividad ($n = 5$)
+Conforme a Nielsen y Landauer (1993) y las recomendaciones del Nielsen Norman Group (diapositiva 73 de clase), una muestra de 5 evaluadores permite descubrir entre el 80% y 85% de los problemas cualitativos de usabilidad sin incurrir en costos redundantes. Los participantes fueron seleccionados por su coincidencia con la persona arquetípica del proyecto: **Juliana Ospina** (profesional remota o híbrida con menos de un año en su equipo).
+
+### 2.2 Protocolo de Pensamiento en Voz Alta (*Think-Aloud Protocol*)
+- **Fijación de Expectativas**: Se aclaró a los evaluadores que se evaluaba la interfaz y no sus capacidades personales, garantizando que expresaran dudas sin temor.
+- **Rol del Evaluador**: Observación pasiva sin intervención ante tropiezos o dudas momentáneas, permitiendo registrar la conducta orgánica del usuario en un entorno realista.
+- **Cierre y Reflexión**: Recolección de impresiones globales y aplicación inmediata del cuestionario estandarizado.
+
+---
+
+## 3. Resultados Cuantitativos del Instrumento SUS
+
+### 3.1 Puntuación Individual y Consolidada
+La transformación estándar aplica: $(X_i - 1)$ para afirmaciones impares y $(5 - X_i)$ para afirmaciones pares. La sumatoria se multiplica por 2,5.
+
+| Participante | Fecha / Hora | SUS (0-100) | Calificación Bangor | Resumen Cualitativo |
+| :--- | :--- | :--- | :--- | :--- |
+| **P1** | 08/10 20:20 | **95,0** | Excelente (A+) | Elogió la mesa de dibujo. Sugirió temporizador, modos de dibujo y marcador de victorias. |
+| **P2** | 08/10 23:54 | **32,5** | Deficiente (F) | Jugadores precargados (Sara, Tomás, Lucía) generaron confusión. Exigió empezar de cero. |
+| **P3** | 09/10 16:09 | **70,0** | Aceptable (B) | Sin comentario; marcó posición neutral en soporte técnico y aprendizaje requerido. |
+| **P4** | 11/10 13:44 | **97,5** | Excelente (A+) | Sin comentario; puntajes casi perfectos en integración, facilidad y seguridad. |
+| **P5** | 12/10 16:42 | **92,5** | Excelente (A+) | Calificó la idea como hermosa; solicitó expandir cosmética, funciones y más minijuegos. |
+| **Consolidado** | **Media: 77,5** | **Mediana: 92,5** | **Desv. Típica: 26,6** | **Comportamiento Bimodal: 4 casos altos (>70) vs. 1 caso crítico (32,5).** |
+
+> **Análisis de Dispersión**: Si se tratara al Participante 2 como una anomalía matemática y se excluyera, el promedio ascendería a 88,75. No obstante, metodológicamente es un error descartarlo: su comentario fundamentó de forma precisa un fallo de onboarding que afectaba a usuarios novatos.  
+> **Subescala de Usabilidad (Lewis & Sauro, 2009)**: **78,1 / 100**  
+> **Subescala de Facilidad de Aprendizaje (*Learnability*)**: **75,0 / 100**
+
+---
+
+## 4. Análisis Cualitativo y Gráfico Semáforo (*Stoplight Chart*)
+
+Siguiendo las diapositivas 100-110 de clase:
+- 🟢 **Verde**: Desempeño óptimo y satisfacción.
+- 🟡 **Amarillo**: Duda menor o fricción superada de forma autónoma.
+- 🔴 **Rojo**: Bloqueo o confusión severa.
+
+| Componente / Aspecto Evaluado | P1 | P2 | P3 | P4 | P5 | Síntesis del Hallazgo |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **1. Estado Inicial & Onboarding** | 🟢 | 🔴 | 🟡 | 🟢 | 🟢 | P2 confundido por avatares fijos; P3 con dudas iniciales. |
+| **2. Mesa de Dibujo (Lienzo & Dinámica)** | 🟢 | 🟡 | 🟢 | 🟢 | 🟢 | Excelente acogida; P1 solicitó tiempo y modos. |
+| **3. Rincón de Palabras (Asíncrono)** | 🟢 | 🟡 | 🟢 | 🟢 | 🟢 | Dinámica clara; P2 dudó ante falta de partida limpia. |
+| **4. Momento Post-Partida & Salida** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | Aprobación total de la salida sin notificaciones de culpa. |
+| **5. Tu Rincón (Perfil & Avatar)** | 🟢 | 🟢 | 🟡 | 🟢 | 🟢 | Intuitivo; P5 solicitó expandir personalización. |
+| **6. Percepción de No-Obligatoriedad** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | Validación total: seguridad evaluada en 4,8 / 5,0. |
+
+---
+
+## 5. Diagnóstico de Usabilidad y Clasificación de Severidad de Nielsen
+
+Para priorizar las soluciones de ingeniería se aplicó la Escala de Severidad de Usabilidad de Jakob Nielsen (1994):
+
+| Nivel de Severidad | Problema Identificado | Impacto en el Usuario | Solución Implementada en v4.0 |
+| :--- | :--- | :--- | :--- |
+| **Nivel 3 · Problema Mayor** | Jugadores ficticios fijos en v1 (Sara, Tomás, Lucía). | Confusión severa en P2 (SUS: 32,5); creyó que el sistema estaba ocupado o roto. | Partida limpia de cero con solo `Tú`. Toggle transparente de simulación opcional. |
+| **Nivel 2 · Problema Menor** | Falta de control temporal en dibujo y repetición de palabras en la cadena. | P1 no sabía cuánto duraría el break. En palabras se podían repetir vocablos. | Selector de 60s/30s/libre con inicio al trazar. Validador estricto de palabras ya usadas. |
+| **Nivel 2 · Problema Menor** | Loop de puntuación infinita en adivinanza multijugador P2P. | Al adivinar remotamente se generaba un eco en bucle otorgando puntos infinitos (+4900 pts). | Guard estricto `State.draw.roundWon = true` y flag `broadcast = false` en eventos remotos. |
+| **Nivel 1 · Cosmético** | Poca variedad de minijuegos y perfil sin impacto visible en la experiencia. | P5 solicitó expandir actividades y dar utilidad real a los gustos seleccionados. | Trivia gamificada con medallas, El Pasillo, voz WebRTC y preguntas según gustos. |
+
+---
+
+## 6. Diagramas de Flujo de Tareas (*Task Flows / Wireflows*)
+
+Como señalan las diapositivas 50 a 56 de clase (*«Planificar y definir pruebas - Flujo de tareas»*), cada actividad se formaliza a través de un flujo estructurado:
+
+### 6.1 Flujo 1: Mesa de Dibujo Sincrónica (Tiempo Real / P2P)
+
+```mermaid
+graph TD
+    A[Inicio: Sala Principal] -->|Clic 'Entrar a dibujar'| B[Mesa de Dibujo: Estado Limpio]
+    B --> C{Configurar Partida}
+    C -->|Modo| D[Adivinar palabra secreta vs. Dibujo libre]
+    C -->|Tiempo| E[Selector: 60s, 30s o Sin Límite]
+    C -->|Red| F[Solitario / Bots / Sala P2P WebRTC]
+    D & E & F --> G[Usuario traza en el lienzo]
+    G -->|Primer trazo detectado| H[Inicio Automático de Cronómetro]
+    H --> I[Adivinanzas en Chat en Tiempo Real]
+    I --> J{¿Palabra Coincide?}
+    J -->|No| K[Mensaje normal en chat sin sanción]
+    J -->|Sí| L[>> CORTE DE LOOP << Detener tiempo + 10 pts + Confeti]
+    L --> M[Momento Post-Partida: La Cafetería]
+    M --> N{Decisión del Usuario}
+    N -->|Seguir charlando| O[Rompehielos afín a gustos + Micrófono WebRTC]
+    N -->|Jugar otra vez| B
+    N -->|Salir sin avisar| P[Salida silenciosa confirmada: 'Ghosting amigable']
+```
+
+### 6.2 Flujo 2: Rincón de Palabras Asincrónico (Por Turnos)
+
+```mermaid
+graph TD
+    A[Inicio: Sala Principal] -->|Clic 'Dejar jugada'| B[Rincón de Palabras]
+    B --> C[Lee última palabra aportada y letra requerida]
+    C --> D[Usuario redacta palabra en formulario]
+    D --> E{Validaciones del Sistema}
+    E -->|Longitud < 2| F[Error: 'Mínimo 2 letras']
+    E -->|Palabra ya usada| G[Error de Prevención: 'Ya fue usada en esta cadena']
+    E -->|Letra no coincide| H[Error Amable: 'Debe empezar con última letra previa']
+    E -->|Válida| I[Guardar en LocalStorage + Confeti + Notificación toast]
+    I --> J{¿Lleva >= 3 palabras?}
+    J -->|Sí| K[Desbloquea Logro: 'Diccionario Ágil']
+    J -->|No| L[Retorno a Sala Principal]
+    K --> L
+```
+
+### 6.3 Flujo 3: Trivia Relámpago Gamificada (Minijuego de 5 Preguntas)
+
+```mermaid
+graph TD
+    A[Inicio: Sala Principal] -->|Clic 'Jugar trivia'| B[Carga 5 preguntas aleatorias del banco]
+    B --> C[Muestra pregunta + Inicia cronómetro 15s]
+    C --> D{¿Usuario responde antes de 15s?}
+    D -->|Tiempo agotado| E[Racha vuelve a 0 + Muestra dato curioso + Siguiente]
+    D -->|Incorrecta| F[Botón rojo + Muestra respuesta correcta + Siguiente]
+    D -->|Correcta| G[+100 pts + Bono racha + Confeti + Siguiente]
+    E & F & G --> H{¿Completó las 5 preguntas?}
+    H -->|No| C
+    H -->|Sí| I[Pantalla de Premiación y Medallas]
+    I --> J{Puntaje Obtenido}
+    J -->|>= 400 pts| K[🏆 Medalla de Oro + Logro 'Mente Brillante']
+    J -->|>= 200 pts| L[🥈 Medalla de Plata + Logro 'Mente Brillante']
+    J -->|< 200 pts| M[🥉 Medalla de Bronce]
+    K & L & M --> N[Opciones: Jugar otra vez / Ir a Cafetería / Volver a Sala]
+```
+
+### 6.4 Flujo 4: La Cafetería & El Pasillo (Social de Baja Fricción)
+
+```mermaid
+graph TD
+    A[Acceso desde Post-Partida o Menú] --> B[La Cafetería / El Pasillo]
+    B --> C[Algoritmo de Gustos: Pregunta rompehielos afinada al perfil]
+    B --> D[Chat de Voz WebRTC: Activar micrófono en vivo P2P]
+    B --> E[Síntesis de Voz: Escuchar compañero virtual vía Web Speech API]
+    B --> F[Muro de Notas breves: Mensaje informal + Reacciones ☕ 🍪 👏]
+    C & D & E & F --> G[Clic 'Salir sin avisar']
+    G --> H[Regreso a Sala Principal: Cero presión social]
+```
+
+---
+
+## 7. Historias de Usuario Priorizadas (Metodología MoSCoW)
+
+| ID | Historia de Usuario (Persona: Juliana) | Criterios de Aceptación (Formato Gherkin) | MoSCoW |
+| :-: | :--- | :--- | :-: |
+| **HU-1** | Como Juliana, quiero que la partida empiece de cero mostrando únicamente mi presencia (`Tú`), para entender qué pasa sin confundirme. | **Dado** que entro a la sala, **cuando** abro un rincón lúdico, **entonces** solo veo mi avatar y ningún bot impuesto. | **Must Have** |
+| **HU-2** | Como Juliana, quiero entrar a un juego en un solo clic, para no requerir manuales ni ayuda técnica. | **Dado** que estoy en la sala, **cuando** toco un juego, **entonces** se abre de inmediato sin diálogos de configuración obligatorios. | **Must Have** |
+| **HU-3** | Como Juliana, quiero dibujar en un lienzo reactivo real, para que el juego se sienta vivo y divertido. | **Dado** que estoy en la Mesa de Dibujo, **cuando** trazo con mouse o dedo, **entonces** el trazo responde con fluidez, color y opción de deshacer. | **Must Have** |
+| **HU-4** | Como Juliana, quiero poner un tiempo límite opcional al dibujo, para controlar la duración de mi pausa activa. | **Dado** que estoy en la Mesa de Dibujo, **cuando** elijo un límite (60s, 30s o libre), **entonces** el cronómetro inicia al primer trazo. | **Should Have** |
+| **HU-5** | Como Juliana, quiero que el sistema valide que no se repitan palabras en la cadena, para mantener el juego fresco. | **Dado** que envío una palabra, **cuando** ya existe en la cadena previa, **entonces** el sistema la rechaza amablemente indicándolo. | **Must Have** |
+| **HU-6** | Como Juliana, quiero que la adivinanza en vivo corte estrictamente el loop de victoria, para no recibir puntos anómalos. | **Dado** que se adivina la palabra, **cuando** el sistema detecta el acierto, **entonces** suma 10 pts una sola vez y no repite el evento. | **Must Have** |
+| **HU-7** | Como Juliana, quiero jugar una Trivia gamificada con cronómetro y medallas, para tener variedad y sentir que gano algo. | **Dado** que juego trivia, **cuando** respondo 5 preguntas en menos de 15s, **entonces** gano puntos, racha y medallas de bienestar. | **Should Have** |
+| **HU-8** | Como Juliana, quiero poder activar chat de voz en la cafetería, para charlar con mis compañeros si ambos lo deseamos. | **Dado** que estoy en La Cafetería, **cuando** pulso conectar voz, **entonces** el micrófono transmite por WebRTC con indicador visual. | **Could Have** |
+| **HU-9** | Como Juliana, quiero que mi perfil configure intereses y desbloquee logros, para que la app se adapte a mí y tenga utilidad. | **Dado** que elijo tags y gano partidas, **cuando** guardo perfil, **entonces** veo insignias desbloqueadas y preguntas afines. | **Should Have** |
+| **HU-10** | Como Juliana, quiero poder salir sin avisar en cualquier momento, para no sentir culpa ni compromiso social forzado. | **Dado** que deseo retirarme, **cuando** toco «Salir sin avisar», **entonces** regreso a la sala con un mensaje de privacidad confirmada. | **Must Have** |
+
+---
+
+## 8. Matriz de Cambios Implementados (v1 vs. v4.0 Producción)
+
+| Componente | Prototipo v1 (Evaluado) | Versión v4.0 (Implementación Final) | Justificación UX |
+| :--- | :--- | :--- | :--- |
+| **Jugadores iniciales** | Sara, Tomás y Lucía fijos en el código. | Sala limpia por defecto con `Tú` + toggle transparente de simulación opcional. | R2 (SUS: 32,5) |
+| **Lienzo de dibujo** | Simulación visual estática. | Lienzo completo: 8 colores, 3 grosores, borrador, deshacer (undo) y descarga PNG. | R1 y Tarea 1 |
+| **Temporizador** | Inexistente. | Temporizador dinámico (60s, 30s, libre) que inicia al trazar con aviso sonoro sutil. | R1 (Pull quote) |
+| **Adivinanza y Marcador** | Inexistente. | Chat interactivo con detección de aciertos, confeti, marcador y corte estricto de loop. | R1 y Hallazgo P2P |
+| **Cadena de palabras** | 3 palabras precargadas fijas. | Cadena asincrónica persistente con regla de última letra y validación de NO repetidas. | R2 y Feedback usuario |
+| **Trivia Relámpago** | Estática con aviso «no disponible». | Minijuego gamificado: 18 preguntas, 15s de límite, rachas (+25 pts) y medallas de bienestar. | R5 y Feedback usuario |
+| **La Cafetería** | Pregunta fija predefinida. | Preguntas afinadas a tags del perfil + chat de voz WebRTC y síntesis de voz. | Feedback usuario |
+| **Tu Rincón (Perfil)** | Formulario decorativo sin impacto. | Perfil interactivo: define preguntas rompehielos, añade barra de niveles y 4 insignias. | Feedback usuario |
+| **Salida silenciosa** | Botón presente sin feedback. | Salida silenciosa reforzada con toast: «Saliste en silencio. Cero presión». | Ítem 9 SUS (4,8/5,0) |
+
+---
+
+## 9. Cumplimiento de las 10 Heurísticas de Usabilidad de Jakob Nielsen
+
+1. **Visibilidad del estado del sistema**: Cronómetro con contador tabular y pulso visual; indicador de presencia en sala; feedback sonoro suave opcional; notificaciones toast no invasivas.
+2. **Coincidencia con el mundo real**: Metáforas cotidianas de descanso («Sala de Descanso», «Mesa de Dibujo», «La Cafetería», «Pausa de café»), sin jerga técnica intimidante.
+3. **Control y libertad del usuario**: Botones de deshacer trazo, limpiar lienzo, jugar sin límite de tiempo y salida libre sin avisar (*ghosting amigable*).
+4. **Consistencia y estándares**: Regla de color 60-30-10, botones con jerarquía táctil estándar, iconos universales y retícula base-8 en espaciados.
+5. **Prevención de errores**: Validación de la letra inicial y palabras duplicadas antes del envío; normalización de mayúsculas y acentos en adivinanzas.
+6. **Reconocimiento antes que recuerdo**: Pistas de palabras, última letra encadenada y avatares participantes siempre visibles en el campo visual.
+7. **Flexibilidad y eficiencia de uso**: Coexistencia de canales sincrónicos (en vivo) y asincrónicos (por turnos); atajos de teclado y soporte táctil para móviles y stylus.
+8. **Diseño estético y minimalista**: Eliminación de ruido visual y elementos ficticios; tipografías Google Fonts de alta legibilidad (Fredoka y Nunito); espacio negativo armónico.
+9. **Ayuda a reconocer y recuperarse de errores**: Mensajes amables que indican exactamente la regla violada sin culpabilizar al usuario.
+10. **Ayuda y documentación**: Recordatorios de bajo perfil («Aquí nada es obligatorio»), subtítulos explicativos y modal para invitar colegas mediante enlace.
+
+---
+
+## 10. Conclusiones y Próximos Pasos
+
+1. **Validación del Enfoque Lúdico No Obligatorio**: Con una mediana de usabilidad de **92,5** y un puntaje de seguridad de **4,8 / 5,0**, PlayBreak demostró que los descansos lúdicos voluntarios son percibidos como un entorno seguro y agradable para mitigar la fatiga laboral.
+2. **Corrección Integral del Onboarding**: El rediseño hacia una partida limpia y la transparencia de las funciones eliminó de raíz la causa del valor atípico de 32,5 puntos, garantizando una curva de aprendizaje instantánea.
+3. **Entrega Lista para Producción v4.0**: La aplicación web funcional cumple a cabalidad con los estándares de la materia y está disponible para despliegue público en GitHub Pages (`https://hinarasm12.github.io/PlayBreak/`).
+
+---
+
+## 11. Referencias Bibliográficas
+
+- **Bangor, A., Kortum, P. T., & Miller, J. T.** (2008). *An empirical evaluation of the system usability scale*. International Journal of Human-Computer Interaction, 24(6), 574-594.
+- **Brooke, J.** (1986). *SUS: A 'quick and dirty' usability scale*. In Usability Evaluation in Industry (pp. 189-194). London: Taylor & Francis.
+- **Lewis, J. R., & Sauro, J.** (2009). *The factor structure of the system usability scale*. In International Conference on Human Centered Design (pp. 94-103). Springer.
+- **Nielsen, J.** (1994). *Enhancing the explanatory power of usability heuristics*. In Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (pp. 152-158). ACM.
+- **Nielsen, J., & Landauer, T. K.** (1993). *A mathematical model of the finding of usability problems*. In Proceedings of the INTERACT'93 and CHI'93 Conference (pp. 206-213). ACM.
+- **Sauro, J.** (2011). *A Practical Guide to the System Usability Scale: Background, Benchmarks & Best Practices*. Measuring Usability LLC.
+"""
+    return md_content
+
 if __name__ == '__main__':
     doc = create_document()
     
-    # Rutas de destino
     out_dir = r"D:\Escritorio\H-C\Documentación\Entregas"
     os.makedirs(out_dir, exist_ok=True)
     
     out_docx_1 = os.path.join(out_dir, "Entregable 6 - Grupo 7 - Evaluacion y cambios.docx")
     out_docx_2 = r"D:\Escritorio\H-C\Entregable_6_Grupo_7_Evaluacion_y_Cambios.docx"
     
-    doc.save(out_docx_1)
-    doc.save(out_docx_2)
-    print("Saved DOCX to:", out_docx_1)
-    print("Saved DOCX to:", out_docx_2)
+    try:
+        doc.save(out_docx_1)
+        print("Saved DOCX to:", out_docx_1)
+    except Exception as e:
+        print("Warning saving docx 1:", e)
+
+    try:
+        doc.save(out_docx_2)
+        print("Saved DOCX to:", out_docx_2)
+    except Exception as e:
+        print("Notice: Entregable_6_Grupo_7_Evaluacion_y_Cambios.docx está abierto en Word u otra app:", e)
+
+    md = generate_markdown()
+    out_md_1 = os.path.join(out_dir, "Entregable_6_Grupo_7_Evaluacion_y_Cambios.md")
+    out_md_2 = r"D:\Escritorio\H-C\Entregable_6_Grupo_7_Evaluacion_y_Cambios.md"
+
+    try:
+        with open(out_md_1, 'w', encoding='utf-8') as f:
+            f.write(md)
+        print("Saved Markdown to:", out_md_1)
+    except Exception as e:
+        print("Warning saving md 1:", e)
+
+    try:
+        with open(out_md_2, 'w', encoding='utf-8') as f:
+            f.write(md)
+        print("Saved Markdown to:", out_md_2)
+    except Exception as e:
+        print("Warning saving md 2:", e)

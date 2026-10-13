@@ -1,7 +1,11 @@
 /**
- * PlayBreak - Lógica de Aplicación Web Completa (v3.8)
- * Con Multijugador Real WebRTC (PeerJS), Bots Activos en Vivo y 4 Actividades Lúdicas
- * Diseñado bajo principios de Usabilidad y HCI (Facultad de Minas - Grupo #7)
+ * PlayBreak - Lógica de Aplicación Web Completa (v4.0)
+ * - Corrección de loop de victoria P2P (guard estricto contra duplicación)
+ * - Prevención de palabras repetidas en Rincón de Palabras
+ * - Trivia Relámpago gamificada con 18 preguntas, +100 pts, rachas y medallas
+ * - Chat de voz WebRTC real + Síntesis de voz para compañeros virtuales
+ * - Perfil interactivo con impacto real (preguntas por gustos, niveles y logros)
+ * - Multijugador WebRTC P2P (PeerJS) y 4 Actividades Lúdicas
  */
 
 (function () {
@@ -14,17 +18,18 @@
     currentScreen: 'mapa',
     theme: localStorage.getItem('pb_theme') || 'light',
     
-    // Perfil del Usuario
+    // Perfil del Usuario y Logros
     profile: {
       name: localStorage.getItem('pb_name') || 'Tú',
-      color: localStorage.getItem('pb_color') || '#C98B5B',
+      color: localStorage.getItem('pb_color') || '#5F9E82',
       tags: JSON.parse(localStorage.getItem('pb_tags') || '["Cine", "Café", "Música"]'),
       mode: localStorage.getItem('pb_mode') || 'texto',
-      stats: JSON.parse(localStorage.getItem('pb_stats') || '{"breaks": 0, "drawings": 0, "words": 0, "pasillo": 0}')
+      stats: JSON.parse(localStorage.getItem('pb_stats') || '{"breaks": 0, "drawings": 0, "words": 0, "pasillo": 0, "triviaScore": 0}'),
+      achievements: JSON.parse(localStorage.getItem('pb_achievements') || '{"picasso": false, "wordsmith": false, "trivia": false, "pasillo": false}')
     },
 
-    // Modo Compañeros Virtuales (Simulación transparente)
-    simulatedCompanionsEnabled: localStorage.getItem('pb_sim_companions') !== 'false', // Por defecto activo para experiencia inmediata
+    // Modo Compañeros Virtuales
+    simulatedCompanionsEnabled: localStorage.getItem('pb_sim_companions') !== 'false',
     virtualFriends: [
       { id: 'f1', name: 'Sara', color: '#B79CE0', active: true, points: 0 },
       { id: 'f2', name: 'Tomás', color: '#7CC4A4', active: true, points: 0 },
@@ -37,9 +42,10 @@
       topicIndex: 0,
       secretWord: 'GATO',
       hint: 'Mascota peluda de cuatro patas',
-      timeLimit: 60, // 60, 30, 90, 0 (infinito)
+      timeLimit: 60,
       timeLeft: 60,
       timerRunning: false,
+      roundWon: false, // Guardia estricta contra loops
       timerInterval: null,
       botGuessInterval: null,
       gameOver: false,
@@ -58,34 +64,30 @@
       chain: JSON.parse(localStorage.getItem('pb_word_chain') || '[]')
     },
 
-    // Estado de Trivia Relámpago
+    // Estado de Trivia Relámpago Gamificada
     trivia: {
       currentQuestionIndex: 0,
       score: 0,
-      active: false,
-      questions: [
-        {
-          q: "¿Cuál es tu bebida ideal para una pausa a media tarde?",
-          options: ["Café negro bien cargado", "Té o infusión aromática", "Agua bien fría", "Jugo natural o smoothie"],
-          icebreaker: "¡Dato curioso! El 64% de los remotos prefieren el café entre las 3 y 4 PM."
-        },
-        {
-          q: "Si pudieras teletrabajar mañana desde cualquier lugar, ¿cuál elegirías?",
-          options: ["Cabaña en las montañas con chimenea", "Playa con brisa y buen Wi-Fi", "Cafetería vintage en una ciudad europea", "Mi propia cama con almohadas cómodas"],
-          icebreaker: "¡Excelente! La naturaleza inspira la creatividad según diversos estudios de psicología ambiental."
-        },
-        {
-          q: "¿Cuál es tu mejor estrategia para desconectar la mente 5 minutos?",
-          options: ["Estirar los brazos y caminar", "Mirar por la ventana", "Escuchar una canción relajante", "Garabatear en un papel"],
-          icebreaker: "¡Totalmente válido! PlayBreak fue diseñado justamente para dar ese espacio de micro-descanso."
-        }
-      ]
+      streak: 0,
+      roundQuestions: [],
+      timer: 15,
+      timerInterval: null,
+      active: false
     },
 
-    // Estado de El Pasillo (Café Virtual - Actividad 4)
+    // Estado de El Pasillo (Café Virtual)
     pasillo: {
       topic: "«¿Cuál es tu canción o sonido infalible para concentrarte teletrabajando?»",
       notes: JSON.parse(localStorage.getItem('pb_pasillo_notes') || '[]')
+    },
+
+    // Chat de Voz en La Cafetería
+    voice: {
+      enabled: false,
+      isMuted: false,
+      localStream: null,
+      activeCall: null,
+      isSpeaking: false
     },
 
     // Multijugador WebRTC P2P (PeerJS)
@@ -112,24 +114,140 @@
     { word: "AVIÓN", hint: "Vuela por los cielos con pasajeros" }
   ];
 
-  // Banco de notas iniciales para El Pasillo
+  // Banco de 18 preguntas gamificadas para Trivia Relámpago
+  const TRIVIA_BANK = [
+    {
+      cat: "☕ Hábitos de Café",
+      q: "¿Cuál es el mejor momento biológico para tomar café y evitar el choque de cortisol?",
+      options: ["Apenas abres los ojos (6:00 AM)", "Entre las 9:30 AM y las 11:30 AM", "Justo antes de almorzar (12:30 PM)", "A las 10:00 PM"],
+      correct: 1,
+      fact: "¡Exacto! El cortisol matutino alcanza su pico al despertar; esperar a media mañana maximiza la energía."
+    },
+    {
+      cat: "💻 Vida Remota",
+      q: "¿Cuál es la regla de oro 20-20-20 recomendada por optometristas para descansar los ojos?",
+      options: ["Cada 20 min, mirar a 20 pies (6m) por 20 segundos", "Trabajar 20 min y dormir 20 min a 20°C", "Tomar 20 sorbos de agua cada 20 minutos", "Bajar el brillo de la pantalla un 20%"],
+      correct: 0,
+      fact: "¡Así es! La regla 20-20-20 relaja el músculo ciliar y previene la fatiga visual informática."
+    },
+    {
+      cat: "🎵 Música & Foco",
+      q: "¿Qué tipo de sonido ha demostrado mejorar la concentración al enmascarar ruidos molestos?",
+      options: ["Heavy metal a máximo volumen", "Ruido marrón o lluvia constante", "Noticias de televisión de fondo", "Silencio absoluto de cámara anecoica"],
+      correct: 1,
+      fact: "¡Correcto! El ruido marrón tiene frecuencias graves suaves que calman la mente y bloquean distracciones."
+    },
+    {
+      cat: "🎬 Cultura Pop",
+      q: "En la serie 'The Office', ¿qué objeto pone Jim en gelatina como broma a Dwight?",
+      options: ["Su grapadora", "Su taza de café", "El mouse de su computador", "Su teléfono"],
+      correct: 0,
+      fact: "¡Clásico! La grapadora en gelatina amarilla es una de las bromas más icónicas de la televisión."
+    },
+    {
+      cat: "🧠 Psicología de Pausas",
+      q: "¿Cuánto tiempo dura una micro-pausa óptima para reiniciar la atención según estudios ergonómicos?",
+      options: ["Entre 2 y 5 minutos", "Exactamente 45 minutos", "30 segundos", "3 horas"],
+      correct: 0,
+      fact: "¡Brillante! Micro-pausas de 3 a 5 minutos reducen la fatiga acumulada en más de un 40%."
+    },
+    {
+      cat: "🌍 Curiosidades",
+      q: "¿En qué país se originó la tradición del 'Fika' (pausa sagrada diaria para café y charla con colegas)?",
+      options: ["Italia", "Suecia", "Colombia", "Japón"],
+      correct: 1,
+      fact: "¡Cierto! En Suecia el 'Fika' es una institución social fundamental para la cohesión de equipos."
+    },
+    {
+      cat: "☕ Hábitos de Café",
+      q: "Si necesitas descafeinar naturalmente tu rutina por la tarde, ¿cuál es una infusión relajante ideal?",
+      options: ["Espresso doble", "Manzanilla con lavanda o rooibos", "Bebida energética", "Té negro concentrado"],
+      correct: 1,
+      fact: "¡Excelente! El rooibos no tiene cafeína y es rico en antioxidantes para las tardes."
+    },
+    {
+      cat: "💻 Vida Remota",
+      q: "¿Qué porcentaje de la comunicación humana depende de señales no verbales y tono de voz?",
+      options: ["Solo el 10%", "Alrededor del 70% al 90%", "Exactamente el 100%", "El 30%"],
+      correct: 1,
+      fact: "¡Exacto! Por eso los chats de solo texto a veces se sienten fríos; PlayBreak aporta calidez lúdica."
+    },
+    {
+      cat: "🎮 Videojuegos",
+      q: "¿Qué videojuego acogedor de gestión de islas se volvió un fenómeno global de teletrabajo en 2020?",
+      options: ["Call of Duty", "Animal Crossing: New Horizons", "Doom Eternal", "FIFA 20"],
+      correct: 1,
+      fact: "¡Animal Crossing! Miles de equipos de trabajo incluso celebraron reuniones virtuales en sus islas."
+    },
+    {
+      cat: "🌱 Bienestar",
+      q: "¿Qué postura física simple ayuda a contrarrestar la joroba de computador al terminar una tarea?",
+      options: ["Abrir el pecho y juntar los omóplatos hacia atrás", "Inclinarse más hacia la pantalla", "Cruzar las piernas fuertemente", "Mirar al teclado fijo"],
+      correct: 0,
+      fact: "¡Muy bien! Abrir el pecho durante 15 segundos alivia la tensión del cuello y trapecio."
+    }
+  ];
+
+  // Preguntas rompehielos personalizadas por tags del perfil
+  const ICEBREAKER_BY_TAG = {
+    'Cine': [
+      "¿Cuál es esa película o serie que podrías ver diez veces sin aburrirte?",
+      "Si hicieran una película de tu equipo de trabajo, ¿qué actor te interpretaría?",
+      "¿Cuál es el mejor final de película que has visto?"
+    ],
+    'Música': [
+      "¿Qué álbum o canción te saca de un bloqueo mental cuando estás programando o trabajando?",
+      "¿Cuál fue el último concierto o toque al que fuiste?",
+      "¿Cuál es tu gusto musical culposo que pocos conocen?"
+    ],
+    'Café': [
+      "¿Cómo preparas tu café o bebida ideal por la mañana?",
+      "¿Team café filtrado artesanal o espresso fuerte?",
+      "¿Cuál es el mejor acompañamiento para un café a media tarde?"
+    ],
+    'Videojuegos': [
+      "¿Cuál es el videojuego que más horas de tu vida te ha atrapado?",
+      "Si pudieras vivir dentro del universo de un juego, ¿cuál elegirías?",
+      "¿Prefieres juegos cooperativos tranquilos o competitivos intensos?"
+    ],
+    'Senderismo': [
+      "¿Cuál es el paisaje natural más impresionante que has visto en persona?",
+      "¿Prefieres montaña con niebla o playa con brisa?",
+      "¿Qué sendero o caminata sueñas con hacer algún día?"
+    ],
+    'Cocina': [
+      "¿Cuál es tu plato estrella cuando te toca cocinar para otros?",
+      "¿Cuál es la comida que instantáneamente te arregla un mal día?",
+      "¿Dulce o salado para una pausa de media tarde?"
+    ],
+    'Lectura': [
+      "¿Qué libro recomendarías a ojos cerrados a cualquier persona?",
+      "¿Prefieres libros físicos con olor a papel o Kindle/digital?",
+      "¿Qué libro te cambió la perspectiva de alguna cosa?"
+    ],
+    'Mascotas': [
+      "Si tienes mascota, ¿cuál es la travesura más graciosa que ha hecho durante una videollamada?",
+      "¿Eres team perros, team gatos o team plantas?",
+      "Si tu mascota pudiera hablar 1 minuto, ¿qué crees que te diría?"
+    ]
+  };
+
+  const DEFAULT_ICEBREAKERS = [
+    "¿Qué fue lo más divertido o desafiante del dibujo?",
+    "¿Cuál es tu estrategia infalible para desconectar la mente?",
+    "Si pudieras teletransportarte a cualquier lugar en tu almuerzo, ¿dónde irías?",
+    "¿Qué comida te alegra instantáneamente el día?",
+    "¿Cuál ha sido la anécdota más curiosa que te ha pasado en teletrabajo?"
+  ];
+
+  // Notas iniciales para El Pasillo
   const INITIAL_PASILLO_NOTES = [
     { id: 1, author: "Sara", color: "#B79CE0", text: "¡Lofi hip hop beats de fondo siempre! Me ayuda un montón a escribir código.", time: "Hace 10 min", reactions: { "☕": 3, "👏": 1 } },
     { id: 2, author: "Tomás", color: "#7CC4A4", text: "Sonido de lluvia en bosque con audífonos. Siento que estoy en una cabaña.", time: "Hace 25 min", reactions: { "☕": 2, "🍪": 4 } }
   ];
 
-  // Preguntas rompehielos para el momento post-partida
-  const ICEBREAKER_QUESTIONS = [
-    "¿Qué fue lo más divertido o desafiante del dibujo?",
-    "¿Cuál es tu canción favorita para concentrarte trabajando?",
-    "Si tuvieras un superpoder para tus reuniones de trabajo, ¿cuál sería?",
-    "¿Qué comida te alegra instantáneamente el día?",
-    "¿Qué proyecto personal o pasatiempo te tiene emocionado últimamente?",
-    "¿Película o serie favorita que recomendarías a ojos cerrados?"
-  ];
-
   // ==========================================
-  // 2. UTILIDADES DOM Y TOAST
+  // 2. UTILIDADES DOM Y NOTIFICACIONES
   // ==========================================
   const $ = (selector, context = document) => context.querySelector(selector);
   const $$ = (selector, context = document) => [...context.querySelectorAll(selector)];
@@ -153,43 +271,58 @@
     t.timer = setTimeout(() => { t.hidden = true; }, 3200);
   }
 
+  function checkAndUnlockAchievement(key) {
+    if (!State.profile.achievements[key]) {
+      State.profile.achievements[key] = true;
+      localStorage.setItem('pb_achievements', JSON.stringify(State.profile.achievements));
+      const names = {
+        picasso: "🎨 ¡Logro Desbloqueado: Picasso del Break!",
+        wordsmith: "🔤 ¡Logro Desbloqueado: Diccionario Ágil!",
+        trivia: "⚡ ¡Logro Desbloqueado: Mente Brillante!",
+        pasillo: "💬 ¡Logro Desbloqueado: Alma del Pasillo!"
+      };
+      toast(names[key] || "🏆 ¡Nuevo Logro Desbloqueado!");
+      window.sounds && window.sounds.playSuccess();
+      triggerConfetti();
+      renderProfileScreen();
+    }
+  }
+
   // ==========================================
   // 3. ENRUTAMIENTO Y PANTALLAS
   // ==========================================
   function navigateTo(screenId) {
     if (!$(`#screen-${screenId}`)) screenId = 'mapa';
 
-    // Detener temporizadores si salimos de dibujo
     if (State.currentScreen === 'dibujo' && screenId !== 'dibujo') {
       stopDrawingTimers();
     }
 
     State.currentScreen = screenId;
 
-    // Actualizar clases activas en vistas
     $$('.screen-view').forEach(view => {
       view.classList.toggle('active', view.id === `screen-${screenId}`);
     });
 
-    // Actualizar botones de navegación lateral
     $$('.nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.go === screenId);
     });
 
-    // Actualizar pastillas del prototipo superior
     $$('.proto-pill').forEach(pill => {
       pill.classList.toggle('active', pill.dataset.go === screenId);
     });
 
     window.sounds && window.sounds.playClick();
 
-    // Ciclo de vida por pantalla
     if (screenId === 'dibujo') initDrawingScreen();
     if (screenId === 'turnos') renderWordChain();
     if (screenId === 'trivia') initTriviaScreen();
     if (screenId === 'pasillo') renderPasilloScreen();
     if (screenId === 'fin') renderPostGameScreen();
     if (screenId === 'perfil') renderProfileScreen();
+
+    // Resaltar rincón recomendado en la Sala según modo del perfil
+    updateRecommendedRoomBadge();
 
     try {
       history.replaceState(null, '', `#${screenId}`);
@@ -199,6 +332,22 @@
     if (viewport) viewport.scrollTop = 0;
   }
 
+  function updateRecommendedRoomBadge() {
+    const wordCard = $('.room-card.async');
+    if (!wordCard) return;
+    const oldBadge = $('#recommendedBadge');
+    if (oldBadge) oldBadge.remove();
+
+    if (State.profile.mode === 'turnos') {
+      const badge = document.createElement('span');
+      badge.id = 'recommendedBadge';
+      badge.className = 'status-pill';
+      badge.style.cssText = 'background:#FEF7E6;color:#8A5D12;font-size:11px;margin-bottom:6px';
+      badge.innerHTML = '⭐ Recomendado según tu perfil';
+      wordCard.insertBefore(badge, wordCard.children[1]);
+    }
+  }
+
   function stopDrawingTimers() {
     clearInterval(State.draw.timerInterval);
     clearInterval(State.draw.botGuessInterval);
@@ -206,7 +355,7 @@
   }
 
   // ==========================================
-  // 4. MESA DE DIBUJO (CANVAS & BOTS ACTIVOS)
+  // 4. MESA DE DIBUJO (CANVAS & P2P CORREGIDO)
   // ==========================================
   let canvas, ctx;
 
@@ -221,7 +370,7 @@
     canvas.height = (rect.height || 320) * dpr;
     ctx.scale(dpr, dpr);
 
-    clearCanvasSurface();
+    clearCanvasSurface(false);
 
     canvas.addEventListener('pointerdown', handlePointerDown);
     canvas.addEventListener('pointermove', handlePointerMove);
@@ -281,7 +430,6 @@
     canvas.setPointerCapture(e.pointerId);
     State.draw.drawing = true;
     
-    // Iniciar temporizador y el loop de adivinanzas activas de compañeros
     if (!State.draw.timerRunning && State.draw.timeLimit > 0) {
       startTimer();
     }
@@ -296,7 +444,6 @@
     ctx.lineTo(x + 0.5, y);
     ctx.stroke();
 
-    // Broadcast por WebRTC si hay multijugador online conectado
     if (State.p2p.connection) {
       sendPeerMessage({
         type: 'draw_down',
@@ -337,7 +484,6 @@
     State.draw.timerRunning = true;
     updateTimerDisplay();
 
-    // Iniciar el temporizador regresivo
     State.draw.timerInterval = setInterval(() => {
       State.draw.timeLeft--;
       updateTimerDisplay();
@@ -351,7 +497,6 @@
       }
     }, 1000);
 
-    // Iniciar el bucle orgánico de adivinanzas de los compañeros mientras dibujas
     startActiveBotGuessingLoop();
   }
 
@@ -360,9 +505,8 @@
     if (!State.simulatedCompanionsEnabled || State.draw.mode !== 'guess') return;
 
     let tickCount = 0;
-    // Cada 4 a 6 segundos un compañero virtual hace un intento en el chat
     State.draw.botGuessInterval = setInterval(() => {
-      if (State.draw.gameOver || !State.draw.timerRunning) {
+      if (State.draw.gameOver || !State.draw.timerRunning || State.draw.roundWon) {
         clearInterval(State.draw.botGuessInterval);
         return;
       }
@@ -372,15 +516,14 @@
   }
 
   function triggerSimulatedCompanionGuess(tick = 1) {
-    if (State.draw.gameOver) return;
+    if (State.draw.gameOver || State.draw.roundWon) return;
 
     const friends = State.virtualFriends;
     const friend = friends[Math.floor(Math.random() * friends.length)];
     const word = State.draw.secretWord;
 
-    // Banco de adivinanzas cercanas / simpáticas según la palabra secreta
     const closeGuesses = {
-      'GATO': ["¿Es un perro?", "¿Un conejo?", "¿Tiene orejas?", "¿Un tigre pequeño?", "¿Un animal?", "¡Parece un minino!"],
+      'GATO': ["¿Es un perro?", "¿Un conejo?", "¿Tiene orejas?", "¿Un tigre pequeño?", "¿Un animal doméstico?", "¡Parece un felino!"],
       'PIZZA': ["¿Es un pastel?", "¿Una rueda?", "¿Comida?", "¿Un queso?", "¡Parece una tarta!", "¿Algo horneado?"],
       'BICICLETA': ["¿Una moto?", "¿Un vehículo?", "¿Tiene dos ruedas?", "¿Un triciclo?", "¡Parece un patinete!"],
       'GUITARRA': ["¿Un violín?", "¿Un instrumento?", "¿Tiene cuerdas?", "¿Un bajo?", "¡Tiene forma de guitarra!"],
@@ -393,15 +536,11 @@
     };
 
     const guessesList = closeGuesses[word] || ["¿Qué será?", "¿Es un objeto?", "¿Es un animal?", "¡Casi lo tengo!"];
-
-    // En los primeros intentos hacen deducciones; tras 4-5 intentos o si falta poco tiempo, uno de ellos adivina la palabra
     const shouldWin = tick >= 4 || (State.draw.timeLeft <= 22 && State.draw.timeLeft > 8);
 
     if (shouldWin) {
-      // ¡El compañero adivina!
       clearInterval(State.draw.botGuessInterval);
-      postChatMessage(friend.name, `¡Es un ${word}! 🎉`, false);
-      handleGuessSuccess(friend.name, word);
+      executeRoundWin(friend.name, word, true);
     } else {
       const guess = guessesList[Math.floor(Math.random() * guessesList.length)];
       postChatMessage(friend.name, guess, false);
@@ -428,15 +567,19 @@
     chatBox.scrollTop = chatBox.scrollHeight;
   }
 
-  function handleGuessSuccess(winnerName, word) {
+  // --- SOLUCIÓN DEL BUG DE PUNTOS INFINITOS P2P ---
+  function executeRoundWin(winnerName, word, broadcast = true) {
+    // GUARD ESTRICTO: Si la ronda ya fue ganada, salir de inmediato sin sumar más puntos
+    if (State.draw.roundWon) return;
+    State.draw.roundWon = true;
     State.draw.gameOver = true;
     stopDrawingTimers();
 
-    // Otorgar puntos
+    // Sumar exactamente 10 puntos una sola vez
     State.draw.scores[winnerName] = (State.draw.scores[winnerName] || 0) + 10;
     renderScoreboard();
 
-    // Mensaje en chat
+    // Mensaje de victoria único en chat
     const chatBox = $('#guessMessages');
     const winMsg = document.createElement('div');
     winMsg.className = 'guess-msg correct';
@@ -444,16 +587,22 @@
     chatBox.appendChild(winMsg);
     chatBox.scrollTop = chatBox.scrollHeight;
 
-    // Celebración visual y sonora
+    // Desbloquear logro si el usuario ganó
+    if (winnerName === State.profile.name) {
+      checkAndUnlockAchievement('picasso');
+      State.profile.stats.drawings++;
+      saveProfileStats();
+    }
+
     triggerConfetti();
     window.sounds && window.sounds.playSuccess();
-    toast(`¡${winnerName} adivinó la palabra «${word}»!`);
+    toast(`¡${winnerName} adivinó la palabra «${word}»! (+10 pts)`);
 
-    $('#drawStatusMsg').textContent = `¡Ronda ganada por ${winnerName}! Toca «Cambiar palabra» o «Terminar ronda y charlar».`;
+    $('#drawStatusMsg').textContent = `¡Ronda ganada por ${winnerName}! Toca «Cambiar palabra» para otra ronda o «Terminar ronda y charlar».`;
     $('#drawStatusMsg').className = 'feedback-msg success';
 
-    // Broadcast a compañero P2P si está conectado
-    if (State.p2p.connection) {
+    // Broadcast a compañero P2P cortando el loop (el receptor no volverá a hacer broadcast)
+    if (broadcast && State.p2p.connection) {
       sendPeerMessage({ type: 'win', winnerName, word });
     }
   }
@@ -489,6 +638,7 @@
     }
 
     State.draw.gameOver = false;
+    State.draw.roundWon = false; // Reset limpio para nueva ronda
     State.draw.timeLeft = State.draw.timeLimit;
     State.draw.timerRunning = false;
     stopDrawingTimers();
@@ -523,6 +673,12 @@
     const list = $('#scoreboardList');
     if (!list) return;
 
+    // Asegurar que el usuario actual tenga su nombre en el marcador
+    if (State.draw.scores['Tú'] !== undefined && State.profile.name !== 'Tú') {
+      State.draw.scores[State.profile.name] = (State.draw.scores[State.profile.name] || 0) + State.draw.scores['Tú'];
+      delete State.draw.scores['Tú'];
+    }
+
     let entries = Object.entries(State.draw.scores);
     list.innerHTML = entries.map(([name, pts]) => `
       <div class="scoreboard-item">
@@ -533,20 +689,23 @@
   }
 
   function handleUserGuessSubmit(guessText) {
+    if (State.draw.roundWon) {
+      toast('Esta ronda ya terminó. Toca «Cambiar palabra» para jugar otra.');
+      return;
+    }
+
     const cleanGuess = guessText.trim().toUpperCase();
     if (!cleanGuess) return;
 
     window.sounds && window.sounds.playPop();
     postChatMessage(State.profile.name, guessText, false);
 
-    // Broadcast guess a P2P
     if (State.p2p.connection) {
       sendPeerMessage({ type: 'guess', name: State.profile.name, text: guessText });
     }
 
-    // Verificar si acertó
     if (cleanGuess === State.draw.secretWord.toUpperCase()) {
-      handleGuessSuccess(State.profile.name, State.draw.secretWord);
+      executeRoundWin(State.profile.name, State.draw.secretWord, true);
     }
   }
 
@@ -560,7 +719,7 @@
   }
 
   // ==========================================
-  // 5. RINCÓN DE PALABRAS (ASÍNCRONO)
+  // 5. RINCÓN DE PALABRAS (PREVENCIÓN DE DUPLICADOS)
   // ==========================================
   const INITIAL_CHAIN_WORDS = [
     { word: "café", author: "Tomás", time: "Ayer" },
@@ -633,6 +792,20 @@
       return;
     }
 
+    // --- NUEVA VALIDACIÓN: PREVENCIÓN DE PALABRAS YA USADAS ---
+    const alreadyUsed = State.words.chain.some(item => {
+      const w = item.word.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return w === clean;
+    });
+
+    if (alreadyUsed) {
+      msgEl.textContent = `❌ La palabra «${word.trim()}» ya fue usada anteriormente en esta cadena. ¡Piensa en una nueva!`;
+      msgEl.className = 'feedback-msg error';
+      window.sounds && window.sounds.playClick();
+      return;
+    }
+
+    // Validación de regla de última letra
     if (State.words.chain.length > 0) {
       const lastWord = State.words.chain[State.words.chain.length - 1].word.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const requiredChar = lastWord.charAt(lastWord.length - 1);
@@ -659,13 +832,17 @@
     State.profile.stats.words++;
     saveProfileStats();
 
+    if (State.profile.stats.words >= 3) {
+      checkAndUnlockAchievement('wordsmith');
+    }
+
     if (State.p2p.connection) {
       sendPeerMessage({ type: 'word_chain', entry: newEntry });
     }
 
     window.sounds && window.sounds.playSuccess();
     triggerConfetti();
-    toast('¡Dejaste tu jugada asíncrona en el Rincón de Palabras!');
+    toast('¡Dejaste tu jugada en el Rincón de Palabras!');
 
     $('#wordInput').value = '';
     renderWordChain();
@@ -681,31 +858,34 @@
     const requiredChar = lastWord.charAt(lastWord.length - 1);
 
     const dictionary = {
-      'a': ["amabilidad", "almuerzo", "armonía", "abrazo"],
-      'b': ["bienestar", "buena onda", "brindis"],
-      'c': ["cafecito", "compañerismo", "creatividad"],
-      'd': ["desconexión", "diversión", "diálogo"],
-      'e': ["energía", "entusiasmo", "empatía"],
-      'f': ["felicidad", "frescura", "fuerza"],
-      'g': ["gratitud", "ganas", "gusto"],
-      'h': ["humor", "harmonia", "horizonte"],
-      'i': ["inspiración", "ilusión", "ideas"],
+      'a': ["amabilidad", "almuerzo", "armonía", "abrazo", "aire", "ánimo"],
+      'b': ["bienestar", "buena onda", "brindis", "brisa"],
+      'c': ["cafecito", "compañerismo", "creatividad", "calma"],
+      'd': ["desconexión", "diversión", "diálogo", "descanso"],
+      'e': ["energía", "entusiasmo", "empatía", "equilibrio"],
+      'f': ["felicidad", "frescura", "fuerza", "foco"],
+      'g': ["gratitud", "ganas", "gusto", "generosidad"],
+      'h': ["humor", "harmonia", "horizonte", "hábito"],
+      'i': ["inspiración", "ilusión", "ideas", "interés"],
       'j': ["juego", "jornada", "júbilo"],
-      'l': ["luz", "libertad", "lectura"],
-      'm': ["música", "motivación", "mañana"],
-      'n': ["naturaleza", "novedad", "nube"],
-      'o': ["optimismo", "oxígeno", "organización"],
-      'p': ["pausa", "paciencia", "paz"],
-      'r': ["risa", "recarga", "respiro"],
-      's': ["sonrisa", "salud", "serenidad"],
-      't': ["tranquilidad", "té", "tiempo"],
+      'l': ["luz", "libertad", "lectura", "logro"],
+      'm': ["música", "motivación", "mañana", "mate"],
+      'n': ["naturaleza", "novedad", "nube", "nobleza"],
+      'o': ["optimismo", "oxígeno", "organización", "onda"],
+      'p': ["pausa", "paciencia", "paz", "placer"],
+      'r': ["risa", "recarga", "respiro", "recreo"],
+      's': ["sonrisa", "salud", "serenidad", "sueño"],
+      't': ["tranquilidad", "té", "tiempo", "tregua"],
       'u': ["unión", "universo"],
-      'v': ["vitalidad", "vida", "viaje"],
+      'v': ["vitalidad", "vida", "viaje", "visión"],
       'z': ["zen", "zona libre"]
     };
 
     const options = dictionary[requiredChar] || ["armonía", "pausa", "sonrisa"];
-    const chosenWord = options[Math.floor(Math.random() * options.length)];
+    
+    // Filtrar palabras que no hayan sido usadas ya
+    const available = options.filter(cand => !State.words.chain.some(e => e.word.toLowerCase() === cand));
+    const chosenWord = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : (options[0] + " nueva");
     const friend = State.virtualFriends[Math.floor(Math.random() * State.virtualFriends.length)];
 
     const simulatedEntry = {
@@ -722,64 +902,163 @@
   }
 
   // ==========================================
-  // 6. TRIVIA RELÁMPAGO (MINIJUEGO 3)
+  // 6. TRIVIA RELÁMPAGO (GAMIFICADA CON RECOMPENSAS)
   // ==========================================
   function initTriviaScreen() {
-    State.trivia.currentQuestionIndex = 0;
     State.trivia.score = 0;
+    State.trivia.streak = 0;
+    State.trivia.currentQuestionIndex = 0;
+
+    // Seleccionar 5 preguntas aleatorias del banco
+    const shuffled = [...TRIVIA_BANK].sort(() => 0.5 - Math.random());
+    State.trivia.roundQuestions = shuffled.slice(0, 5);
+
     renderTriviaQuestion();
   }
 
   function renderTriviaQuestion() {
-    const q = State.trivia.questions[State.trivia.currentQuestionIndex];
+    clearInterval(State.trivia.timerInterval);
+
+    const q = State.trivia.roundQuestions[State.trivia.currentQuestionIndex];
     if (!q) {
       renderTriviaFinish();
       return;
     }
 
-    $('#triviaQuestionNum').textContent = `Pregunta ${State.trivia.currentQuestionIndex + 1} de ${State.trivia.questions.length}`;
+    $('#triviaQuestionNum').innerHTML = `Pregunta ${State.trivia.currentQuestionIndex + 1} de 5 · <span style="color:var(--accent)">Puntos: ${State.trivia.score} pts</span> ${State.trivia.streak > 1 ? `· 🔥 Racha x${State.trivia.streak}` : ''}`;
     $('#triviaQuestionText').textContent = q.q;
+
+    // Categoría de la pregunta
+    const factBox = $('#triviaFactBox');
+    factBox.hidden = true;
 
     const optionsContainer = $('#triviaOptionsList');
     optionsContainer.innerHTML = q.options.map((opt, i) => `
       <button type="button" class="trivia-opt-btn" data-trivia-idx="${i}">
-        ${escapeHtml(opt)}
+        <span>${String.fromCharCode(65 + i)}.</span> ${escapeHtml(opt)}
       </button>
     `).join('');
 
-    $('#triviaFactBox').hidden = true;
+    // Temporizador de 15 segundos por pregunta
+    State.trivia.timer = 15;
+    updateTriviaTimerUI();
+
+    State.trivia.timerInterval = setInterval(() => {
+      State.trivia.timer--;
+      updateTriviaTimerUI();
+      if (State.trivia.timer <= 0) {
+        clearInterval(State.trivia.timerInterval);
+        handleTriviaTimeout();
+      }
+    }, 1000);
   }
 
-  function handleTriviaSelect(index) {
-    const q = State.trivia.questions[State.trivia.currentQuestionIndex];
-    window.sounds && window.sounds.playPop();
+  function updateTriviaTimerUI() {
+    const el = $('#triviaTimerDisplay');
+    if (el) {
+      el.textContent = `⏱️ ${State.trivia.timer} s`;
+      el.classList.toggle('low', State.trivia.timer <= 5);
+    }
+  }
+
+  function handleTriviaTimeout() {
+    const q = State.trivia.roundQuestions[State.trivia.currentQuestionIndex];
+    State.trivia.streak = 0;
+    window.sounds && window.sounds.playDing();
 
     $$('.trivia-opt-btn').forEach((btn, idx) => {
       btn.disabled = true;
-      if (idx === index) btn.classList.add('selected');
+      if (idx === q.correct) btn.classList.add('selected');
     });
 
     const factBox = $('#triviaFactBox');
-    factBox.textContent = q.icebreaker;
+    factBox.innerHTML = `⏰ ¡Tiempo agotado! La respuesta correcta era: <b>${escapeHtml(q.options[q.correct])}</b>. ${q.fact}`;
     factBox.hidden = false;
 
     setTimeout(() => {
       State.trivia.currentQuestionIndex++;
       renderTriviaQuestion();
-    }, 2000);
+    }, 2800);
+  }
+
+  function handleTriviaSelect(index) {
+    clearInterval(State.trivia.timerInterval);
+    const q = State.trivia.roundQuestions[State.trivia.currentQuestionIndex];
+    const isCorrect = index === q.correct;
+
+    $$('.trivia-opt-btn').forEach((btn, idx) => {
+      btn.disabled = true;
+      if (idx === q.correct) {
+        btn.classList.add('selected');
+      } else if (idx === index) {
+        btn.style.borderColor = 'var(--bad)';
+        btn.style.background = '#FDE8E8';
+      }
+    });
+
+    const factBox = $('#triviaFactBox');
+
+    if (isCorrect) {
+      State.trivia.streak++;
+      const bonus = State.trivia.streak > 1 ? 25 : 0;
+      const ptsEarned = 100 + bonus;
+      State.trivia.score += ptsEarned;
+
+      window.sounds && window.sounds.playSuccess();
+      factBox.innerHTML = `✅ <b>¡Correcto! (+${ptsEarned} pts)</b> ${q.fact}`;
+      factBox.style.borderColor = 'var(--sage)';
+      factBox.style.background = 'var(--sage-soft)';
+      triggerConfetti();
+    } else {
+      State.trivia.streak = 0;
+      window.sounds && window.sounds.playClick();
+      factBox.innerHTML = `❌ <b>Casi:</b> La opción correcta era: <i>${escapeHtml(q.options[q.correct])}</i>. ${q.fact}`;
+      factBox.style.borderColor = 'var(--sand-d)';
+      factBox.style.background = 'var(--sand-light)';
+    }
+
+    factBox.hidden = false;
+
+    setTimeout(() => {
+      State.trivia.currentQuestionIndex++;
+      renderTriviaQuestion();
+    }, 2600);
   }
 
   function renderTriviaFinish() {
-    $('#triviaQuestionNum').textContent = "¡Ronda Completada!";
-    $('#triviaQuestionText').textContent = "¡Excelente pausa activa! Has compartido tus preferencias de break.";
-    $('#triviaOptionsList').innerHTML = `
-      <div style="text-align:center;padding:var(--s4) 0">
-        <p style="font-size:16px;color:var(--soft);margin-bottom:var(--s3)">
-          Estas preguntas ayudan a descubrir gustos en común con tu equipo sin reuniones forzadas.
-        </p>
-        <button type="button" class="btn" data-go="fin">Ir a la Cafetería Post-Partida</button>
+    clearInterval(State.trivia.timerInterval);
+
+    const finalScore = State.trivia.score;
+    State.profile.stats.triviaScore = (State.profile.stats.triviaScore || 0) + finalScore;
+    saveProfileStats();
+
+    let medal = { icon: "🥉", title: "Medalla de Bronce", desc: "¡Buen intento! Cada pausa suma bienestar mental." };
+    if (finalScore >= 400) {
+      medal = { icon: "🏆", title: "Medalla de Oro: Maestro del Break", desc: "¡Puntaje legendario! Eres una eminencia en datos y cultura de pausas activas." };
+      checkAndUnlockAchievement('trivia');
+    } else if (finalScore >= 200) {
+      medal = { icon: "🥈", title: "Medalla de Plata: Experto en Pausas", desc: "¡Excelente resultado! Demostraste gran conocimiento y foco." };
+      checkAndUnlockAchievement('trivia');
+    }
+
+    $('#triviaQuestionNum').textContent = "¡Ronda de Trivia Completada!";
+    $('#triviaQuestionText').innerHTML = `
+      <div style="text-align:center;padding:var(--s2) 0">
+        <div style="font-size:48px;margin-bottom:8px">${medal.icon}</div>
+        <h2 style="color:var(--accent);margin-bottom:4px">${medal.title}</h2>
+        <p style="font-size:22px;font-weight:800;color:var(--ink)">${finalScore} Puntos Obtenidos</p>
+        <p style="color:var(--soft);font-size:14px;max-width:440px;margin:8px auto">${medal.desc}</p>
       </div>
     `;
+
+    $('#triviaOptionsList').innerHTML = `
+      <div class="actions-row center" style="margin-top:var(--s2)">
+        <button type="button" class="btn" data-act="restart-trivia">🎮 Jugar otra ronda de trivia</button>
+        <button type="button" class="btn alt" data-go="fin">Ir a la Cafetería</button>
+        <button type="button" class="btn alt" data-go="mapa">Volver a la sala</button>
+      </div>
+    `;
+
     $('#triviaFactBox').hidden = true;
     window.sounds && window.sounds.playSuccess();
     triggerConfetti();
@@ -802,7 +1081,7 @@
       return `
         <article class="pasillo-note ${isMe ? 'user' : ''}" data-note-id="${note.id}">
           <div class="pasillo-note-author">
-            <div class="avatar sm" style="width:26px;height:26px;--c:${note.color || '#C98B5B'}">
+            <div class="avatar sm" style="width:26px;height:26px;--c:${note.color || '#5F9E82'}">
               <span class="avatar-smile"></span>
             </div>
             <span>${escapeHtml(note.author)}</span>
@@ -841,6 +1120,8 @@
     State.profile.stats.pasillo = (State.profile.stats.pasillo || 0) + 1;
     saveProfileStats();
 
+    checkAndUnlockAchievement('pasillo');
+
     if (State.p2p.connection) {
       sendPeerMessage({ type: 'pasillo_note', note: newNote });
     }
@@ -864,9 +1145,10 @@
   function simulateCompanionPasilloMessage() {
     const messages = [
       "¡Qué buena pausa! Yo voto por un café con canela hoy ☕",
-      "Terminé un bug que me tenía loco toda la mañana, ¡por fin descanso!",
+      "Terminé un bug que me tenía loco toda la mañana, ¡por fin respiro!",
       "Les recomiendo la playlist de Synthwave Chill para programar concentrado.",
-      "¿Alguien más aquí toma agua con rodajas de limón entre tareas?"
+      "¿Alguien más aquí toma agua con rodajas de limón entre tareas?",
+      "¡Saluditos a todo el equipo! Recuerden estirar el cuello 5 segundos."
     ];
     const friend = State.virtualFriends[Math.floor(Math.random() * State.virtualFriends.length)];
     const text = messages[Math.floor(Math.random() * messages.length)];
@@ -888,25 +1170,137 @@
   }
 
   // ==========================================
-  // 8. MULTIJUGADOR REAL P2P WEBRTC (PEERJS)
+  // 8. CHAT DE VOZ WEBRTC & SÍNTESIS DE VOZ
   // ==========================================
-  function initPeerJS() {
-    if (typeof Peer === 'undefined') {
-      console.warn('PeerJS library not loaded, running in local/fallback mode');
+  function toggleVoiceChat() {
+    if (State.voice.enabled) {
+      // Desactivar voz
+      stopVoiceChat();
+      toast('Micrófono desactivado.');
+    } else {
+      // Activar voz
+      startVoiceChat();
+    }
+  }
+
+  function startVoiceChat() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast('Tu navegador no soporta captura de micrófono.');
       return;
     }
 
-    // Comprobar si la URL trae un parámetro de sala: ?sala=XXXX
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      State.voice.localStream = stream;
+      State.voice.enabled = true;
+      updateVoiceUI(true);
+      toast('🎙️ Micrófono activado en La Cafetería.');
+
+      // Si hay llamada P2P activa, transmitir el audio
+      if (State.p2p.peer && State.p2p.connection && State.p2p.connected) {
+        try {
+          const remotePeerId = State.p2p.connection.peer;
+          const call = State.p2p.peer.call(remotePeerId, stream);
+          State.voice.activeCall = call;
+          call.on('stream', (remoteStream) => {
+            playRemoteAudioStream(remoteStream);
+          });
+        } catch (e) {
+          console.error('P2P Voice error:', e);
+        }
+      }
+    }).catch((err) => {
+      console.warn('Mic access denied:', err);
+      toast('Permiso de micrófono no otorgado. Puedes usar el simulador de voz.');
+    });
+  }
+
+  function stopVoiceChat() {
+    if (State.voice.localStream) {
+      State.voice.localStream.getTracks().forEach(t => t.stop());
+      State.voice.localStream = null;
+    }
+    State.voice.enabled = false;
+    updateVoiceUI(false);
+  }
+
+  function updateVoiceUI(active) {
+    const btn = $('#voiceToggleBtn');
+    if (btn) {
+      btn.innerHTML = active ? '🔴 Silenciar Micrófono' : '🎙️ Conectar Voz (Micrófono)';
+      btn.classList.toggle('danger', active);
+    }
+    const indicator = $('#voiceActiveBadge');
+    if (indicator) indicator.hidden = !active;
+
+    // Halo animado en avatar propio
+    const myAv = $('#postgameMyAvatar');
+    if (myAv) myAv.classList.toggle('speaking', active);
+  }
+
+  function playRemoteAudioStream(stream) {
+    let audioEl = $('#remoteAudioElement');
+    if (!audioEl) {
+      audioEl = document.createElement('audio');
+      audioEl.id = 'remoteAudioElement';
+      audioEl.autoplay = true;
+      document.body.appendChild(audioEl);
+    }
+    audioEl.srcObject = stream;
+    audioEl.play().catch(e => console.log('Audio autoplay blocked:', e));
+    toast('🔊 Escuchando a tu compañero por voz en vivo.');
+  }
+
+  function speakSimulatedVoice(friendName, text) {
+    if (!('speechSynthesis' in window)) {
+      toast(`[Simulación] ${friendName}: «${text}»`);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'es-ES';
+    utter.rate = 1.05;
+
+    // Resaltar avatar del compañero que habla
+    const avatarEl = $(`[data-avatar-name="${friendName}"]`);
+    if (avatarEl) avatarEl.classList.add('speaking');
+
+    utter.onend = () => {
+      if (avatarEl) avatarEl.classList.remove('speaking');
+    };
+
+    window.speechSynthesis.speak(utter);
+    toast(`🔊 ${friendName} está hablando por voz simulada...`);
+  }
+
+  function playCompanionVoiceDemo() {
+    const friend = State.virtualFriends[Math.floor(Math.random() * State.virtualFriends.length)];
+    const responses = [
+      `¡Buena partida ${State.profile.name}! Para mí tomar este descanso de cinco minutos fue genial.`,
+      `¡Hola ${State.profile.name}! Me encantó cómo quedó el dibujo, ¡buen pulso!`,
+      `¡Qué buena pausa! Yo voto por hacernos un buen café ahora mismo.`,
+      `¡Muy divertido jugar contigo ${State.profile.name}! Descansar la mente recarga la energía.`
+    ];
+    const text = responses[Math.floor(Math.random() * responses.length)];
+    speakSimulatedVoice(friend.name, text);
+  }
+
+  // ==========================================
+  // 9. MULTIJUGADOR WEBRTC P2P (PEERJS)
+  // ==========================================
+  function initPeerJS() {
+    if (typeof Peer === 'undefined') return;
+
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('sala');
     if (roomParam) {
-      setTimeout(() => joinPeerRoom(roomParam.toUpperCase()), 500);
+      setTimeout(() => joinPeerRoom(roomParam.toUpperCase()), 600);
     }
   }
 
   function createPeerRoom() {
     if (typeof Peer === 'undefined') {
-      toast('PeerJS no está disponible en este momento. Usando simulación local.');
+      toast('PeerJS no está disponible en este navegador. Usando simulación local.');
       return;
     }
 
@@ -918,10 +1312,8 @@
     try {
       State.p2p.peer = new Peer(peerId, { debug: 1 });
 
-      State.p2p.peer.on('open', (id) => {
-        updateP2PStatus('waiting', `Sala creada: SALA-${code} (Esperando compañero)`);
-        
-        // Actualizar el enlace para compartir en el modal
+      State.p2p.peer.on('open', () => {
+        updateP2PStatus('waiting', `Sala: SALA-${code} (Esperando compañero)`);
         const shareInput = $('#shareRoomInput');
         if (shareInput) {
           const baseUrl = window.location.origin + window.location.pathname;
@@ -934,6 +1326,23 @@
       State.p2p.peer.on('connection', (conn) => {
         setupPeerConnection(conn);
         toast(`¡Un compañero se unió a tu sala online!`);
+      });
+
+      // Recibir llamadas de voz
+      State.p2p.peer.on('call', (call) => {
+        if (State.voice.localStream) {
+          call.answer(State.voice.localStream);
+        } else {
+          navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+            State.voice.localStream = stream;
+            State.voice.enabled = true;
+            updateVoiceUI(true);
+            call.answer(stream);
+          }).catch(() => call.answer());
+        }
+        call.on('stream', (remoteStream) => {
+          playRemoteAudioStream(remoteStream);
+        });
       });
 
       State.p2p.peer.on('error', (err) => {
@@ -965,7 +1374,24 @@
         const conn = State.p2p.peer.connect(targetPeerId);
         setupPeerConnection(conn);
       });
-      State.p2p.peer.on('error', (err) => {
+
+      State.p2p.peer.on('call', (call) => {
+        if (State.voice.localStream) {
+          call.answer(State.voice.localStream);
+        } else {
+          navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+            State.voice.localStream = stream;
+            State.voice.enabled = true;
+            updateVoiceUI(true);
+            call.answer(stream);
+          }).catch(() => call.answer());
+        }
+        call.on('stream', (remoteStream) => {
+          playRemoteAudioStream(remoteStream);
+        });
+      });
+
+      State.p2p.peer.on('error', () => {
         updateP2PStatus('solo', 'No se encontró la sala');
         toast('No se pudo conectar a la sala. Verifica el código.');
       });
@@ -982,8 +1408,6 @@
       updateP2PStatus('connected', `🟢 Conectado en vivo (SALA-${State.p2p.roomCode})`);
       window.sounds && window.sounds.playSuccess();
       toast('¡Conexión P2P en tiempo real establecida!');
-
-      // Enviar saludo
       conn.send({ type: 'hello', name: State.profile.name });
     });
 
@@ -1043,7 +1467,8 @@
         break;
 
       case 'win':
-        handleGuessSuccess(data.winnerName, data.word);
+        // CORTA EL LOOP: broadcast = false para no re-transmitir de vuelta
+        executeRoundWin(data.winnerName, data.word, false);
         break;
 
       case 'word_chain':
@@ -1066,20 +1491,19 @@
     const el = $('#p2pStatusLabel');
     const textEl = $('#p2pStatusText');
     if (!el || !textEl) return;
-
     el.className = `p2p-status ${status}`;
     textEl.textContent = text;
   }
 
   // ==========================================
-  // 9. MOMENTO POST-PARTIDA ("LA CAFETERÍA")
+  // 10. MOMENTO POST-PARTIDA ("LA CAFETERÍA")
   // ==========================================
   function renderPostGameScreen() {
     State.profile.stats.breaks++;
     saveProfileStats();
 
     const avatarsContainer = $('#postgameAvatars');
-    let participants = [{ name: State.profile.name, color: State.profile.color }];
+    let participants = [{ name: State.profile.name, color: State.profile.color, isMe: true }];
 
     if (State.simulatedCompanionsEnabled) {
       participants.push(...State.virtualFriends);
@@ -1087,25 +1511,50 @@
     State.draw.players.forEach(p => participants.push({ name: p, color: '#9B653C' }));
 
     avatarsContainer.innerHTML = participants.map(p => `
-      <div class="avatar lg" style="--c:${p.color}">
+      <div class="avatar lg" data-avatar-name="${escapeHtml(p.name)}" id="${p.isMe ? 'postgameMyAvatar' : ''}" style="--c:${p.color}">
         <span class="avatar-smile"></span>
         <span class="avatar-tag">${escapeHtml(p.name)}</span>
       </div>
     `).join('');
 
-    generateRandomIcebreaker();
+    generatePersonalizedIcebreaker();
+
+    // Si el usuario eligió "Con voz" en su perfil, sugerir activar el micro
+    if (State.profile.mode === 'voz' && !State.voice.enabled) {
+      toast('💡 Tu perfil prefiere voz: Puedes activar el micrófono en la barra inferior.');
+    }
   }
 
-  function generateRandomIcebreaker() {
-    const q = ICEBREAKER_QUESTIONS[Math.floor(Math.random() * ICEBREAKER_QUESTIONS.length)];
+  function generatePersonalizedIcebreaker() {
+    const userTags = State.profile.tags;
+    let questionsPool = [];
+    let activeTag = null;
+
+    if (userTags && userTags.length > 0) {
+      activeTag = userTags[Math.floor(Math.random() * userTags.length)];
+      if (ICEBREAKER_BY_TAG[activeTag]) {
+        questionsPool = ICEBREAKER_BY_TAG[activeTag];
+      }
+    }
+
+    if (!questionsPool.length) {
+      questionsPool = DEFAULT_ICEBREAKERS;
+    }
+
+    const q = questionsPool[Math.floor(Math.random() * questionsPool.length)];
     const el = $('#icebreakerQuestion');
+    const tagBadge = $('#icebreakerTagBadge');
+
     if (el) {
-      el.textContent = `☕ Pregunta para charlar: «${q}»`;
+      el.textContent = `«${q}»`;
+    }
+    if (tagBadge) {
+      tagBadge.textContent = activeTag ? `🎯 Pregunta afinada a tus gustos (${activeTag})` : `☕ Pregunta para charlar`;
     }
   }
 
   // ==========================================
-  // 10. PERFIL Y PERSONALIZACIÓN ("TU RINCÓN")
+  // 11. PERFIL Y PERSONALIZACIÓN ("TU RINCÓN")
   // ==========================================
   const SWATCH_COLORS = ['#C98B5B', '#D96951', '#5B9BC4', '#5F9E82', '#E5A338', '#9B653C', '#7B68EE', '#E06D8C'];
   const AVAILABLE_TAGS = ['Cine', 'Series', 'Videojuegos', 'Música', 'Senderismo', 'Cocina', 'Lectura', 'Fútbol', 'Café', 'Mascotas', 'Fotografía', 'Viajes'];
@@ -1133,6 +1582,50 @@
     $('#statBreaks').textContent = State.profile.stats.breaks;
     $('#statDrawings').textContent = State.profile.stats.drawings;
     $('#statWords').textContent = State.profile.stats.words;
+
+    // Nivel y barra de bienestar
+    renderLevelAndAchievements();
+  }
+
+  function renderLevelAndAchievements() {
+    const totalBreaks = State.profile.stats.breaks;
+    let levelTitle = "Nivel 1: 🌱 Novato del Descanso";
+    let progressPct = Math.min((totalBreaks / 5) * 100, 100);
+
+    if (totalBreaks >= 10) {
+      levelTitle = "Nivel 3: 🌳 Maestro Zen del Bienestar";
+      progressPct = 100;
+    } else if (totalBreaks >= 5) {
+      levelTitle = "Nivel 2: 🌿 Amigo de las Pausas";
+      progressPct = Math.min(((totalBreaks - 5) / 5) * 100, 100);
+    }
+
+    const titleEl = $('#profileLevelTitle');
+    const barEl = $('#profileLevelProgressBar');
+    if (titleEl) titleEl.textContent = levelTitle;
+    if (barEl) barEl.style.width = `${progressPct}%`;
+
+    // Renderizar logros
+    const achList = $('#achievementsGrid');
+    if (!achList) return;
+
+    const achs = [
+      { key: 'picasso', icon: '🎨', title: 'Picasso del Break', desc: 'Gana 1 ronda de dibujo', unlocked: State.profile.achievements.picasso },
+      { key: 'wordsmith', icon: '🔤', title: 'Diccionario Ágil', desc: 'Aporta 3 palabras encadenadas', unlocked: State.profile.achievements.wordsmith },
+      { key: 'trivia', icon: '⚡', title: 'Mente Brillante', desc: 'Gana 200+ pts en Trivia Relámpago', unlocked: State.profile.achievements.trivia },
+      { key: 'pasillo', icon: '💬', title: 'Alma del Pasillo', desc: 'Deja una nota en el café', unlocked: State.profile.achievements.pasillo }
+    ];
+
+    achList.innerHTML = achs.map(a => `
+      <div class="achievement-badge ${a.unlocked ? 'unlocked' : 'locked'}">
+        <div class="ach-icon">${a.icon}</div>
+        <div>
+          <b>${escapeHtml(a.title)}</b>
+          <small>${escapeHtml(a.desc)}</small>
+        </div>
+        <span class="ach-status">${a.unlocked ? '✅ Desbloqueado' : '🔒 Pendiente'}</span>
+      </div>
+    `).join('');
   }
 
   function updateProfileAvatarPreview() {
@@ -1161,12 +1654,74 @@
     localStorage.setItem('pb_color', State.profile.color);
 
     updateProfileAvatarPreview();
+    updateRecommendedRoomBadge();
+
     window.sounds && window.sounds.playSuccess();
     toast('¡Perfil y preferencias guardados con éxito!');
   }
 
+  function checkAndUnlockAchievement(key) {
+    if (!State.profile.achievements) {
+      State.profile.achievements = { picasso: false, wordsmith: false, trivia: false, pasillo: false };
+    }
+    if (!State.profile.achievements[key]) {
+      State.profile.achievements[key] = true;
+      localStorage.setItem('pb_achievements', JSON.stringify(State.profile.achievements));
+      const names = {
+        picasso: '🎨 Picasso del Break (Ronda ganada)',
+        wordsmith: '🔤 Diccionario Ágil (3 palabras aportadas)',
+        trivia: '⚡ Mente Brillante (Experto en Trivia)',
+        pasillo: '💬 Alma del Pasillo (Nota en el café)'
+      };
+      toast(`🏆 ¡Logro desbloqueado: ${names[key] || key}!`);
+      window.sounds && window.sounds.playSuccess();
+      triggerConfetti();
+      renderLevelAndAchievements();
+    }
+  }
+
+  function updateRecommendedRoomBadge() {
+    $$('.recommend-badge').forEach(el => el.remove());
+    $$('.room-card').forEach(el => el.classList.remove('recommended'));
+
+    const mode = State.profile.mode || 'texto';
+    if (mode === 'turnos') {
+      const card = $('.room-card.async');
+      if (card) {
+        card.classList.add('recommended');
+        const b = document.createElement('div');
+        b.className = 'recommend-badge';
+        b.innerHTML = '✨ Recomendada para ti (Modo Asíncrono)';
+        card.prepend(b);
+      }
+    } else if (mode === 'voz') {
+      const card = $('.room-card.live');
+      if (card) {
+        card.classList.add('recommended');
+        const b = document.createElement('div');
+        b.className = 'recommend-badge';
+        b.innerHTML = '🎙️ Recomendada para ti (Modo Voz)';
+        card.prepend(b);
+      }
+    } else { // texto
+      const card = $('.room-card.chat');
+      if (card) {
+        card.classList.add('recommended');
+        const b = document.createElement('div');
+        b.className = 'recommend-badge';
+        b.innerHTML = '💬 Recomendada para ti (Solo Texto)';
+        card.prepend(b);
+      }
+    }
+
+    const sideName = $('#sidebarUserName');
+    const sideAv = $('#sidebarUserAvatar');
+    if (sideName) sideName.textContent = State.profile.name;
+    if (sideAv) sideAv.style.setProperty('--c', State.profile.color);
+  }
+
   // ==========================================
-  // 11. CONFETI NATIVO (CANVAS)
+  // 12. CONFETI NATIVO (CANVAS)
   // ==========================================
   function triggerConfetti() {
     const cvs = $('#confettiCanvas');
@@ -1222,7 +1777,7 @@
   }
 
   // ==========================================
-  // 12. MANEJADORES DE EVENTOS
+  // 13. MANEJADORES DE EVENTOS
   // ==========================================
   function setupEventListeners() {
     document.addEventListener('click', (e) => {
@@ -1238,7 +1793,6 @@
         return;
       }
 
-      // Reacciones en El Pasillo
       const reactBtn = e.target.closest('[data-react]');
       if (reactBtn) {
         handlePasilloReaction(reactBtn.dataset.note, reactBtn.dataset.react);
@@ -1393,7 +1947,19 @@
         break;
 
       case 'force-bot-guess':
-        triggerSimulatedCompanionGuess(4); // Forzar intento
+        triggerSimulatedCompanionGuess(4);
+        break;
+
+      case 'restart-trivia':
+        initTriviaScreen();
+        break;
+
+      case 'toggle-voice-chat':
+        toggleVoiceChat();
+        break;
+
+      case 'play-companion-voice-demo':
+        playCompanionVoiceDemo();
         break;
 
       case 'create-room':
@@ -1425,11 +1991,12 @@
         break;
 
       case 'random-icebreaker':
-        generateRandomIcebreaker();
+        generatePersonalizedIcebreaker();
         window.sounds && window.sounds.playClick();
         break;
 
       case 'ghost-exit':
+        stopVoiceChat();
         navigateTo('mapa');
         toast('🌿 Saliste de la sala en silencio. Nadie recibió notificación.');
         break;
@@ -1462,7 +2029,7 @@
   }
 
   // ==========================================
-  // 13. INICIALIZACIÓN
+  // 14. INICIALIZACIÓN
   // ==========================================
   function initApp() {
     document.documentElement.setAttribute('data-theme', State.theme);
@@ -1476,6 +2043,7 @@
     if (simToggle) simToggle.checked = State.simulatedCompanionsEnabled;
 
     updateProfileAvatarPreview();
+    updateRecommendedRoomBadge();
     setupEventListeners();
     initPeerJS();
 

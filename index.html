@@ -400,20 +400,24 @@
           <div class="page-col">
             <div class="screen-header">
               <h1 id="heading-trivia">Trivia Relámpago</h1>
-              <p class="subtitle">3 preguntas rápidas para descubrir afinidades con tus compañeros de equipo.</p>
+              <p class="subtitle">5 preguntas rápidas sobre hábitos, café y cultura de trabajo con temporizador y medallas.</p>
             </div>
 
             <details class="activity-guide">
               <summary>ℹ️ ¿Cómo funciona la Trivia? <span style="font-size:12px;font-weight:normal;color:var(--soft)">Toca para ver</span></summary>
               <div class="guide-content">
-                <p>Pausa activa de 45 segundos. No hay respuestas correctas ni erradas: el objetivo es compartir preferencias (como cuál es tu horario ideal de café) para romper el hielo y encontrar temas en común.</p>
+                <ol>
+                  <li><b>15 segundos por pregunta:</b> Responde antes de que se agote el cronómetro para ganar +100 puntos.</li>
+                  <li><b>Rachas de aciertos:</b> Respuestas correctas consecutivas otorgan bonos adicionales de +25 puntos.</li>
+                  <li><b>Medallas de bienestar:</b> Acumula puntos para conseguir Medalla de Oro 🏆, Plata 🥈 o Bronce 🥉 y desbloquear logros en tu perfil.</li>
+                </ol>
               </div>
             </details>
 
             <div class="trivia-box">
               <div class="trivia-progress">
-                <span id="triviaQuestionNum">Pregunta 1 de 3</span>
-                <span>⏱️ Pausa de 45 segundos</span>
+                <span id="triviaQuestionNum">Pregunta 1 de 5 · Puntos: 0 pts</span>
+                <span class="trivia-timer-chip" id="triviaTimerDisplay">⏱️ 15 s</span>
               </div>
               <h2 class="trivia-question" id="triviaQuestionText">Cargando pregunta...</h2>
               <div class="trivia-options" id="triviaOptionsList"></div>
@@ -485,9 +489,21 @@
               <!-- Avatares de la partida -->
               <div class="avatar-group" id="postgameAvatars" style="justify-content:center;margin:var(--s4) 0 var(--s2)"></div>
 
-              <!-- Pregunta Rompehielos Aleatoria -->
-              <div class="icebreaker-bubble" id="icebreakerQuestion">
-                ☕ Pregunta para charlar: «¿Qué fue lo más divertido del dibujo?»
+              <!-- Control de Voz en La Cafetería -->
+              <div class="cafeteria-voice-bar">
+                <div class="voice-status-group">
+                  <button type="button" class="btn sm" id="voiceToggleBtn" data-act="toggle-voice-chat">🎙️ Conectar Voz (Micrófono)</button>
+                  <button type="button" class="btn light sm" data-act="play-companion-voice-demo">🔊 Escuchar voz del compañero</button>
+                  <span class="voice-badge" id="voiceActiveBadge" hidden>🟢 Voz Activa (Transmitiendo)</span>
+                </div>
+              </div>
+
+              <!-- Pregunta Rompehielos Personalizada por Gustos -->
+              <div class="icebreaker-container" style="margin-top:var(--s2)">
+                <span class="tag-pill" id="icebreakerTagBadge" style="margin-bottom:6px;display:inline-block">☕ Pregunta para charlar</span>
+                <div class="icebreaker-bubble" id="icebreakerQuestion">
+                  «¿Qué fue lo más divertido del dibujo?»
+                </div>
               </div>
               <button type="button" class="btn ghost sm" data-act="random-icebreaker" style="margin-bottom:var(--s3)">
                 🔄 Generar otra pregunta rompehielos
@@ -577,7 +593,29 @@
               </div>
             </div>
 
-            <!-- 4. Estadísticas Personales -->
+            <!-- 4. Nivel de Bienestar y Hábitos -->
+            <div class="card profile-section">
+              <h3>Tu Nivel de Bienestar y Hábitos</h3>
+              <div class="level-card">
+                <div class="level-header">
+                  <span id="profileLevelTitle" style="font-weight:800;color:var(--accent);font-size:15px">Nivel 1: 🌱 Novato del Descanso</span>
+                </div>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill" id="profileLevelProgressBar" style="width:20%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. Logros e Insignias Desbloqueables -->
+            <div class="card profile-section">
+              <h3>Logros e Insignias Desbloqueables</h3>
+              <p style="font-size:13px;color:var(--soft);margin-bottom:12px">
+                Tus acciones en las actividades desbloquean medallas e insignias permanentes.
+              </p>
+              <div class="achievements-grid" id="achievementsGrid"></div>
+            </div>
+
+            <!-- 6. Estadísticas Personales -->
             <div class="card profile-section">
               <h3>Tus Micro-Pausas Acumuladas</h3>
               <div class="stats-grid">
