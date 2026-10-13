@@ -49,7 +49,7 @@
     },
 
     // Modo Compañeros Virtuales
-    simulatedCompanionsEnabled: localStorage.getItem('pb_sim_companions') !== 'false',
+    simulatedCompanionsEnabled: localStorage.getItem('pb_sim_companions') === 'true',
     virtualFriends: [
       { id: 'f1', name: 'Sara', color: '#B79CE0', active: true, points: 0 },
       { id: 'f2', name: 'Tomás', color: '#7CC4A4', active: true, points: 0 },
@@ -693,10 +693,13 @@
     const peerNameEl = $('#roomPeerAvatarName');
     const peerStatusEl = $('#roomPeerAvatarStatus');
 
-    // Los compañeros en la sala siempre visibles para mantener ambiente vivo
+    // Compañeros virtuales solo visibles si el Modo de Demostración está activado
     if (colleaguesLayer) {
-      colleaguesLayer.hidden = false;
+      colleaguesLayer.hidden = !State.simulatedCompanionsEnabled;
     }
+    $$('.booth-avatars').forEach(box => {
+      box.style.display = State.simulatedCompanionsEnabled ? 'flex' : 'none';
+    });
 
     if (State.room.peer.connected) {
       if (peerAvatar) {
@@ -1001,6 +1004,11 @@
   function initDrawingScreen() {
     setTimeout(initCanvas, 60);
 
+    // Al entrar a la Mesa de Dibujo, consultar si alguien ya tiene el rol de Dibujante
+    if (State.room.peer.connected || State.p2p.connected || window.roomBroadcastChannel) {
+      sendPeerMessage({ type: 'draw_query_role' });
+    }
+
     if (State.draw.mode === 'guess') {
       const current = WORD_BANK[State.draw.topicIndex % WORD_BANK.length];
       State.draw.secretWord = current.word;
@@ -1028,16 +1036,31 @@
   }
 
   function toggleDrawRole() {
-    State.draw.role = State.draw.role === 'drawer' ? 'guesser' : 'drawer';
-    updateDrawRoleUI();
-    sendPeerMessage({
-      type: 'draw_role',
-      role: State.draw.role === 'drawer' ? 'guesser' : 'drawer',
-      word: State.draw.secretWord,
-      hint: State.draw.hint
-    });
-    window.sounds && window.sounds.playClick();
-    toast(State.draw.role === 'drawer' ? '🎨 Ahora eres el Dibujante. ¡Toma el pincel!' : '🔍 Ahora eres Adivinador. ¡Mira el lienzo e intenta adivinar!');
+    if (State.draw.role === 'drawer') {
+      // Ceder el rol de Dibujante: Yo paso a ser Adivinador y el compañero pasa a ser Dibujante
+      State.draw.role = 'guesser';
+      updateDrawRoleUI();
+      sendPeerMessage({
+        type: 'draw_role',
+        role: 'drawer',
+        word: State.draw.secretWord,
+        hint: State.draw.hint
+      });
+      window.sounds && window.sounds.playClick();
+      toast('🔍 Ahora eres Adivinador. Tu compañero tiene el pincel.');
+    } else {
+      // Tomar el rol de Dibujante: Todos los demás pasan AUTOMÁTICAMENTE a ser Adivinadores
+      State.draw.role = 'drawer';
+      updateDrawRoleUI();
+      sendPeerMessage({
+        type: 'claim_drawer',
+        drawerName: State.profile.name,
+        word: State.draw.secretWord,
+        hint: State.draw.hint
+      });
+      window.sounds && window.sounds.playClick();
+      toast('🎨 Asumiste el rol de Dibujante. Todos los demás pasan a ser Adivinadores.');
+    }
   }
 
   function updateDrawRoleUI() {
@@ -1966,28 +1989,59 @@
     });
   }
 
+  function getRoomParamFromUrl() {
+    // 1. Verificar window.location.search (?sala=1234)
+    const searchParams = new URLSearchParams(window.location.search);
+    let sala = searchParams.get('sala');
+    if (sala) return sala;
+
+    // 2. Verificar window.location.hash (#mapa?sala=1234 o #sala=1234)
+    if (window.location.hash.includes('sala=')) {
+      const hashParts = window.location.hash.split('?');
+      if (hashParts[1]) {
+        const p = new URLSearchParams(hashParts[1]);
+        sala = p.get('sala');
+        if (sala) return sala;
+      }
+      const match = window.location.hash.match(/sala=([0-9a-zA-Z]+)/);
+      if (match) return match[1];
+    }
+    return null;
+  }
+
   function initPeerJS() {
     initMesh();
 
     if (typeof Peer === 'undefined') return;
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomParam = urlParams.get('sala');
+    const roomParam = getRoomParamFromUrl();
     if (roomParam) {
-      setTimeout(() => joinPeerRoom(roomParam.toUpperCase()), 600);
+      // El invitado que entra por link asume rol inicial de Adivinador
+      State.draw.role = 'guesser';
+      updateDrawRoleUI();
+      setTimeout(() => joinPeerRoom(roomParam.toUpperCase()), 500);
     } else {
-      // Si no hay sala en la URL, auto-generar roomCode para compartir fácilmente
-      State.p2p.roomCode = Math.floor(1000 + Math.random() * 9000);
+      // Registrar este usuario de inmediato como Host activo en PeerJS
+      // para que cuando comparta el enlace, la sala YA exista en el servidor remoto
+      createPeerRoom(false);
     }
   }
 
-  function createPeerRoom() {
+  function createPeerRoom(showModal = false) {
     if (typeof Peer === 'undefined') {
       toast('PeerJS no disponible. La sincronización local (Mesh) está activa en este equipo.');
       return;
     }
 
-    const code = Math.floor(1000 + Math.random() * 9000);
+    if (State.p2p.peer && State.p2p.isHost && !State.p2p.peer.destroyed) {
+      if (showModal) {
+        updateMultiplayerModalUI();
+        $('#shareRoomDialog')?.showModal();
+      }
+      return;
+    }
+
+    const code = State.p2p.roomCode || Math.floor(1000 + Math.random() * 9000);
     const peerId = `playbreak-room-${code}`;
     State.p2p.roomCode = code;
     State.p2p.isHost = true;
@@ -1998,8 +2052,10 @@
       State.p2p.peer.on('open', () => {
         updateP2PStatus('waiting', `Sala: SALA-${code} (Esperando compañero)`);
         updateMultiplayerModalUI();
-        $('#shareRoomDialog')?.showModal();
-        toast(`Sala online creada: SALA-${code}. ¡Comparte el enlace!`);
+        if (showModal) {
+          $('#shareRoomDialog')?.showModal();
+          toast(`Sala online creada: SALA-${code}. ¡Comparte el enlace!`);
+        }
       });
 
       State.p2p.peer.on('connection', (conn) => {
@@ -2043,14 +2099,27 @@
     const targetPeerId = `playbreak-room-${cleanCode}`;
     State.p2p.roomCode = cleanCode;
     State.p2p.isHost = false;
+    State.draw.role = 'guesser';
+    updateDrawRoleUI();
 
     updateP2PStatus('waiting', `Conectando a SALA-${cleanCode}...`);
 
     try {
       State.p2p.peer = new Peer({ debug: 1 });
       State.p2p.peer.on('open', () => {
-        const conn = State.p2p.peer.connect(targetPeerId);
-        setupPeerConnection(conn);
+        const connectWithRetry = (retriesLeft = 3) => {
+          const conn = State.p2p.peer.connect(targetPeerId, { reliable: true });
+          setupPeerConnection(conn);
+          conn.on('error', (err) => {
+            console.warn('Reintento de conexión a peer remoto...', err);
+            if (retriesLeft > 0) {
+              setTimeout(() => connectWithRetry(retriesLeft - 1), 1200);
+            } else {
+              toast(`No se pudo conectar a SALA-${cleanCode}. Verifica que tu compañero tenga abierta la sala.`);
+            }
+          });
+        };
+        connectWithRetry();
       });
 
       State.p2p.peer.on('call', (call) => {
@@ -2242,6 +2311,15 @@
             y: State.room.avatarY,
             station: State.room.selectedStation
           });
+          // Si yo ya soy el Dibujante, asegurar que el compañero entrante sea Adivinador
+          if (State.draw.role === 'drawer') {
+            sendPeerMessage({
+              type: 'claim_drawer',
+              drawerName: State.profile.name,
+              word: State.draw.secretWord,
+              hint: State.draw.hint
+            });
+          }
           if (wasDisconnected) {
             toast(`🟢 ${State.room.peer.name} está presente en la sala.`);
             window.sounds && window.sounds.playPop();
@@ -2273,6 +2351,15 @@
         if (data.station !== undefined) State.room.peer.station = data.station;
 
         updateRoomPresence();
+        // Si yo ya soy el Dibujante, asegurar que el compañero sea Adivinador
+        if (State.draw.role === 'drawer') {
+          sendPeerMessage({
+            type: 'claim_drawer',
+            drawerName: State.profile.name,
+            word: State.draw.secretWord,
+            hint: State.draw.hint
+          });
+        }
         if (wasDisconnected) {
           toast(`🟢 ${State.room.peer.name} está presente en la sala.`);
           window.sounds && window.sounds.playPop();
@@ -2314,12 +2401,34 @@
         break;
       }
 
+      case 'claim_drawer':
+        // REGLA ESTRICTA: Si otro usuario asume/tiene el rol de Dibujante, todos los demás pasan AUTOMÁTICAMENTE a Adivinador
+        State.draw.role = 'guesser';
+        if (data.word) State.draw.secretWord = data.word;
+        if (data.hint) State.draw.hint = data.hint;
+        updateDrawRoleUI();
+        clearCanvasSurface(false);
+        toast(`🎨 ${data.drawerName || 'Tu compañero'} es el Dibujante. Tu rol cambió automáticamente a Adivinador.`);
+        break;
+
+      case 'draw_query_role':
+        // Si yo ya soy el Dibujante activo, notifico para que quien entra sea Adivinador
+        if (State.draw.role === 'drawer') {
+          sendPeerMessage({
+            type: 'claim_drawer',
+            drawerName: State.profile.name,
+            word: State.draw.secretWord,
+            hint: State.draw.hint
+          });
+        }
+        break;
+
       case 'draw_role':
         State.draw.role = data.role;
         if (data.word) State.draw.secretWord = data.word;
         if (data.hint) State.draw.hint = data.hint;
         updateDrawRoleUI();
-        toast(State.draw.role === 'drawer' ? '🎨 Tu compañero te pasó el turno de dibujar.' : '🔍 Tu compañero tiene el pincel. ¡Intenta adivinar en el chat!');
+        toast(State.draw.role === 'drawer' ? '🎨 Tu compañero te cedió el turno de dibujar. ¡Toma el pincel!' : '🔍 Tu compañero tiene el pincel. ¡Intenta adivinar en el chat!');
         break;
 
       case 'peer_bye':
@@ -2872,8 +2981,19 @@
         break;
 
       case 'next-word':
+        if (State.draw.role !== 'drawer') {
+          toast('Solo el Dibujante puede cambiar la palabra secreta.');
+          break;
+        }
         State.draw.topicIndex = (State.draw.topicIndex + 1) % WORD_BANK.length;
         initDrawingScreen();
+        clearCanvasSurface(true);
+        sendPeerMessage({
+          type: 'claim_drawer',
+          drawerName: State.profile.name,
+          word: State.draw.secretWord,
+          hint: State.draw.hint
+        });
         window.sounds && window.sounds.playClick();
         toast('Nueva palabra cargada.');
         break;
@@ -2911,7 +3031,7 @@
         break;
 
       case 'create-room':
-        createPeerRoom();
+        createPeerRoom(true);
         break;
 
       case 'prompt-join-room':
